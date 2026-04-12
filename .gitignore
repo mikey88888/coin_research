@@ -10,3 +10,6 @@ memory/
 src/*.egg-info/
 reports/*
 !reports/.gitkeep
+log/*.log
+!log/.gitkeep
+!log/README.md
