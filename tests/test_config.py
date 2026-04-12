@@ -26,6 +26,16 @@ class ConfigTests(unittest.TestCase):
         self.assertFalse(settings.enable_rate_limit)
         self.assertEqual(settings.timeout_ms, 15000)
 
+    def test_load_settings_rejects_non_integer_timeout(self) -> None:
+        with patch.dict("os.environ", {"COIN_RESEARCH_TIMEOUT_MS": "fast"}, clear=False):
+            with self.assertRaisesRegex(ValueError, "COIN_RESEARCH_TIMEOUT_MS must be an integer"):
+                load_settings()
+
+    def test_load_settings_rejects_non_positive_timeout(self) -> None:
+        with patch.dict("os.environ", {"COIN_RESEARCH_TIMEOUT_MS": "0"}, clear=False):
+            with self.assertRaisesRegex(ValueError, "COIN_RESEARCH_TIMEOUT_MS must be > 0"):
+                load_settings()
+
 
 if __name__ == "__main__":
     unittest.main()
