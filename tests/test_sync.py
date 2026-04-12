@@ -16,6 +16,22 @@ from coin_research.sync import (
 
 
 class SyncTests(unittest.TestCase):
+    def test_resolve_top_market_cap_universe_requires_positive_top_n(self) -> None:
+        with self.assertRaisesRegex(ValueError, "top_n must be a positive integer"):
+            resolve_top_market_cap_universe(
+                exchange_name="binance",
+                markets_frame=pd.DataFrame(),
+                top_n=0,
+            )
+
+    def test_resolve_top_market_cap_universe_requires_positive_max_candidate_pages(self) -> None:
+        with self.assertRaisesRegex(ValueError, "max_candidate_pages must be a positive integer"):
+            resolve_top_market_cap_universe(
+                exchange_name="binance",
+                markets_frame=pd.DataFrame(),
+                max_candidate_pages=0,
+            )
+
     def test_resolve_top_market_cap_universe_uses_spot_usdt_markets(self) -> None:
         markets = pd.DataFrame(
             [

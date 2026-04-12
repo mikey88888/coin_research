@@ -94,6 +94,8 @@ export COIN_RESEARCH_PG_DSN="postgresql://thinkpad@127.0.0.1:5432/coin_research"
 
 ### 4. 初始化数据库 schema
 
+项目现在会自动读取仓库根目录的 `.env`，所以只要 `.env` 已存在，直接执行即可：
+
 ```bash
 uv run coin-research db-init
 ```
@@ -212,9 +214,16 @@ reports/backtests/five-wave-reversal/<run_id>/
 
 启动方式：
 
+项目会自动读取仓库根目录的 `.env`，所以本地默认情况下直接跑即可：
+
 ```bash
-export COIN_RESEARCH_PG_DSN="postgresql://thinkpad@127.0.0.1:5432/coin_research"
 uv run python -m coin_research.web.app --host 0.0.0.0 --port 8001
+```
+
+如果你确认依赖已经同步好，也可以：
+
+```bash
+uv run --no-sync python -m coin_research.web.app --host 0.0.0.0 --port 8001
 ```
 
 主要页面：

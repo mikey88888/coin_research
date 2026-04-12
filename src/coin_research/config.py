@@ -43,8 +43,12 @@ def project_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def load_project_env() -> bool:
+    return load_dotenv(project_root() / ".env")
+
+
 def load_settings() -> ExchangeConfig:
-    load_dotenv(project_root() / ".env")
+    load_project_env()
     return ExchangeConfig(
         exchange=os.getenv("COIN_RESEARCH_EXCHANGE", "binance"),
         api_key=os.getenv("COIN_RESEARCH_API_KEY") or None,

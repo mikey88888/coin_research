@@ -82,6 +82,11 @@ def floor_datetime_to_timeframe(value: datetime, timeframe: str) -> datetime:
     return datetime.fromtimestamp((value_ms // timeframe_ms) * timeframe_ms / 1000, tz=UTC)
 
 
+def _require_positive_int(*, name: str, value: int) -> None:
+    if value <= 0:
+        raise ValueError(f"{name} must be a positive integer, got {value}")
+
+
 def fetch_market_cap_page(*, page: int, per_page: int = 250, vs_currency: str = "usd") -> pd.DataFrame:
     query = urlencode(
         {
@@ -112,6 +117,9 @@ def resolve_top_market_cap_universe(
     quote: str = "USDT",
     max_candidate_pages: int = 4,
 ) -> pd.DataFrame:
+    _require_positive_int(name="top_n", value=top_n)
+    _require_positive_int(name="max_candidate_pages", value=max_candidate_pages)
+
     spot_markets = markets_frame.copy()
     spot_markets = spot_markets[spot_markets["spot"] == True]
     spot_markets = spot_markets[spot_markets["quote"].astype("string").str.upper() == quote.upper()]

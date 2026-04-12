@@ -3,10 +3,18 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from coin_research.config import load_settings
+from coin_research.config import load_project_env, load_settings
 
 
 class ConfigTests(unittest.TestCase):
+    def test_load_project_env_uses_repo_env_file(self) -> None:
+        with patch("coin_research.config.load_dotenv", return_value=True) as mocked:
+            result = load_project_env()
+        self.assertTrue(result)
+        mocked.assert_called_once()
+        env_path = mocked.call_args.args[0]
+        self.assertEqual(env_path.name, ".env")
+
     def test_load_settings_from_environment(self) -> None:
         with patch.dict(
             "os.environ",

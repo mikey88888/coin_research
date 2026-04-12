@@ -62,12 +62,16 @@ class FakeConnection:
 
 class DbModuleTests(unittest.TestCase):
     def test_get_pg_dsn_requires_env(self) -> None:
-        with patch.dict(os.environ, {}, clear=True):
-            with self.assertRaisesRegex(RuntimeError, "COIN_RESEARCH_PG_DSN is not set"):
-                db.get_pg_dsn()
+        with patch("coin_research.db.load_project_env") as mocked_load:
+            with patch.dict(os.environ, {}, clear=True):
+                with self.assertRaisesRegex(RuntimeError, "COIN_RESEARCH_PG_DSN is not set"):
+                    db.get_pg_dsn()
+            mocked_load.assert_called()
 
-        with patch.dict(os.environ, {"COIN_RESEARCH_PG_DSN": "postgresql://demo"}):
-            self.assertEqual(db.get_pg_dsn(), "postgresql://demo")
+        with patch("coin_research.db.load_project_env") as mocked_load:
+            with patch.dict(os.environ, {"COIN_RESEARCH_PG_DSN": "postgresql://demo"}):
+                self.assertEqual(db.get_pg_dsn(), "postgresql://demo")
+            mocked_load.assert_called()
 
     def test_connect_pg_sets_timezone_and_jit(self) -> None:
         cursor = FakeCursor()

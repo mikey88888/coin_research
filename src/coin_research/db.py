@@ -7,6 +7,8 @@ from typing import Any
 import pandas as pd
 import psycopg
 
+from .config import load_project_env
+
 
 SCHEMA_SQL = """
 CREATE SCHEMA IF NOT EXISTS market_data;
@@ -80,6 +82,7 @@ CREATE TABLE IF NOT EXISTS market_data.crypto_symbol_stats (
 
 
 def get_pg_dsn() -> str:
+    load_project_env()
     dsn = os.environ.get("COIN_RESEARCH_PG_DSN")
     if not dsn:
         raise RuntimeError("COIN_RESEARCH_PG_DSN is not set")
