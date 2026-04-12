@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Universe</p>
+      <h1>币种研究</h1>
+    </div>
+    <form method="get" class="search-form">
+      <input type="search" name="q" value="{{ query }}" placeholder="搜 symbol 或 base" />
+      <button type="submit">搜索</button>
+    </form>
+  </div>
+  <p class="subtle">共 {{ symbol_count | format_int }} 个币。</p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Base</th>
+          <th>1d</th>
+          <th>4h</th>
+          <th>30m</th>
+          <th>5m</th>
+          <th>Latest Sync</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in symbols %}
+        <tr>
+          <td><a class="mono-link" href="/markets/crypto/{{ row.symbol }}">{{ row.symbol }}</a></td>
+          <td>{{ row.base }}</td>
+          <td>{{ row.rows_1d | format_int }}</td>
+          <td>{{ row.rows_4h | format_int }}</td>
+          <td>{{ row.rows_30m | format_int }}</td>
+          <td>{{ row.rows_5m | format_int }}</td>
+          <td>{{ row.latest_sync_at | format_ts }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Run Detail</p>
+      <h1>{{ run_id }}</h1>
+    </div>
+  </div>
+  <div class="metric-row">
+    {% for label, value in metric_cards %}
+      <div class="stat-card">
+        <span>{{ label }}</span>
+        <strong>
+          {% if "收益" in label or "回撤" in label or "率" in label or "平均单笔" in label %}
+            {{ value | format_pct }}
+          {% else %}
+            {{ value | format_int }}
+          {% endif %}
+        </strong>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+{% if equity_rows %}
+<section class="panel">
+  <h2>Equity Curve</h2>
+  <div id="equity-chart" class="chart" data-line='{{ equity_rows | tojson }}'></div>
+</section>
+{% endif %}
+
+<section class="panel">
+  <h2>Trades</h2>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>Return %</th><th>Status</th><th>Exit Reason</th><th>查看</th></tr>
+      </thead>
+      <tbody>
+        {% for row in trade_rows %}
+        <tr>
+          <td><span class="mono-link">{{ row.symbol }}</span></td>
+          <td>{{ row.entry_date | format_ts }}</td>
+          <td>{{ row.exit_date | format_ts }}</td>
+          <td>{{ row.return_pct | format_pct }}</td>
+          <td>{{ row.status }}</td>
+          <td>{{ row.exit_reason or "n/a" }}</td>
+          <td><a class="text-link" href="{{ row.detail_url }}">看交易</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

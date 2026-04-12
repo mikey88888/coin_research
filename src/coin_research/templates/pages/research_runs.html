@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Backtests</p>
+      <h1>回测实验台</h1>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Run</th><th>周期</th><th>引擎</th><th>收益</th><th>年化</th><th>回撤</th><th>完成时间</th></tr>
+      </thead>
+      <tbody>
+        {% for run in runs %}
+        <tr>
+          <td><a class="mono-link" href="{{ run.detail_url }}">{{ run.run_id }}</a></td>
+          <td><span class="pill">{{ run.timeframe }}</span></td>
+          <td>{{ run.engine_type }}</td>
+          <td>{{ run.total_return_pct | format_pct }}</td>
+          <td>{{ run.annualized_return_pct | format_pct }}</td>
+          <td>{{ run.max_drawdown_pct | format_pct }}</td>
+          <td>{{ run.finished_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

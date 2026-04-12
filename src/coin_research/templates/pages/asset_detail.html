@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">{{ exchange_name }}</p>
+      <h1>{{ symbol }}</h1>
+    </div>
+    <div class="timeframe-links">
+      {% for item in timeframe_options %}
+      <a class="chip {% if item == timeframe %}active{% endif %}" href="/markets/crypto/{{ symbol }}?timeframe={{ item }}">{{ item }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="metric-row">
+    <div class="stat-card"><span>Latest Close</span><strong>{{ latest_close | format_number(4) }}</strong></div>
+    <div class="stat-card"><span>Latest Bar</span><strong>{{ latest_bar_time }}</strong></div>
+    <div class="stat-card"><span>Rows</span><strong>{{ row_count | format_int }}</strong></div>
+    <div class="stat-card"><span>First Bar</span><strong>{{ first_bar_time }}</strong></div>
+  </div>
+</section>
+
+{% if selected_trade %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Selected Trade</p>
+      <h2>{{ selected_trade.trade_id }}</h2>
+    </div>
+    <a class="text-link mono-link" href="/research/runs/{{ selected_trade.run_id }}">返回回测</a>
+  </div>
+  <div class="metric-row">
+    <div class="stat-card"><span>Entry</span><strong>{{ selected_trade.entry_date }}</strong></div>
+    <div class="stat-card"><span>Exit</span><strong>{{ selected_trade.exit_date or "open" }}</strong></div>
+    <div class="stat-card"><span>Entry Price</span><strong>{{ selected_trade.entry_price | format_number(4) }}</strong></div>
+    <div class="stat-card"><span>Exit Price</span><strong>{{ selected_trade.exit_price | format_number(4) }}</strong></div>
+    <div class="stat-card"><span>Return</span><strong>{{ selected_trade.return_pct | format_pct }}</strong></div>
+    <div class="stat-card"><span>Exit Reason</span><strong>{{ selected_trade.exit_reason or "n/a" }}</strong></div>
+  </div>
+</section>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>K线</h2>
+  </div>
+  <div
+    id="price-chart"
+    class="chart"
+    data-candles='{{ chart_rows | tojson }}'
+    data-overlay='{{ chart_overlay | tojson }}'
+  ></div>
+</section>
+
+<section class="panel">
+  <h2>Recent Bars</h2>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Bar Time</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th></tr>
+      </thead>
+      <tbody>
+        {% for row in recent_rows %}
+        <tr>
+          <td>{{ row.bar_time | format_ts }}</td>
+          <td>{{ row.open | format_number(4) }}</td>
+          <td>{{ row.high | format_number(4) }}</td>
+          <td>{{ row.low | format_number(4) }}</td>
+          <td>{{ row.close | format_number(4) }}</td>
+          <td>{{ row.volume | format_number(4) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

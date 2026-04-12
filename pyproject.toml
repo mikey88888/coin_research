@@ -1,0 +1,34 @@
+[project]
+name = "coin-research"
+version = "0.1.0"
+description = "CCXT-based crypto quant research workspace"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "ccxt>=4.4.0",
+  "fastapi>=0.115.0",
+  "jinja2>=3.1.0",
+  "numpy>=2.2.0",
+  "pandas>=2.2.0",
+  "psycopg[binary]>=3.2.0",
+  "python-dotenv>=1.0.1",
+  "uvicorn[standard]>=0.34.0",
+]
+
+[project.scripts]
+coin-research = "coin_research.cli:main"
+
+[tool.uv]
+package = true
+
+[dependency-groups]
+dev = [
+  "coverage[toml]>=7.8.0",
+]
+
+[tool.coverage.run]
+source = ["src/coin_research"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
