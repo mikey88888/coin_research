@@ -17,6 +17,8 @@ def timeframe_to_milliseconds(timeframe: str) -> int:
     if not match:
         raise ValueError(f"unsupported timeframe: {timeframe}")
     value = int(match.group(1))
+    if value <= 0:
+        raise ValueError(f"timeframe value must be > 0, got {timeframe!r}")
     unit = match.group(2)
     multipliers = {
         "s": 1_000,

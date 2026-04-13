@@ -37,6 +37,13 @@ class CliValidationTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("argument --symbols-limit: must be a positive integer, got -2", stderr)
 
+    def test_cli_surfaces_config_validation_errors_cleanly(self) -> None:
+        with patch("coin_research.cli.load_settings", side_effect=ValueError("COIN_RESEARCH_TIMEOUT_MS must be > 0, got 0")):
+            code, stderr = self._run_main("markets")
+        self.assertEqual(code, 2)
+        self.assertIn("COIN_RESEARCH_TIMEOUT_MS must be > 0, got 0", stderr)
+        self.assertNotIn("Traceback", stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

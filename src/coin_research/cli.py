@@ -65,7 +65,10 @@ def main() -> None:
         print("schema=ready")
         return
 
-    config = _build_config(args)
+    try:
+        config = _build_config(args)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     if args.command == "markets":
         frame = list_markets(exchange_name=config.exchange, config=config)
