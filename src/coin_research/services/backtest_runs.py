@@ -184,12 +184,56 @@ def load_backtest_run(run_id: str, root: Path | None = None) -> tuple[dict[str, 
     raise FileNotFoundError(f"run not found: {run_id}")
 
 
+def leaderboard_path(root: Path | None = None) -> Path:
+    return (root or project_root()) / "research" / "leaderboard.json"
+
+
+def load_active_leaderboard(root: Path | None = None) -> list[dict[str, Any]]:
+    path = leaderboard_path(root)
+    if not path.exists():
+        return []
+    payload = _read_json(str(path), path.stat().st_mtime_ns)
+    rows = []
+    for index, item in enumerate(payload.get("active_top_results", []), start=1):
+        run_id = item.get("run_id")
+        rows.append(
+            {
+                "rank": _safe_int(item.get("rank")) or index,
+                "stability": item.get("stability") or "unknown",
+                "strategy_key": item.get("strategy_key"),
+                "strategy_label": item.get("strategy_label") or item.get("strategy_key") or "未命名策略",
+                "timeframe": item.get("timeframe"),
+                "exit_mode": item.get("exit_mode"),
+                "engine_type": item.get("engine_type"),
+                "run_id": run_id,
+                "annualized_return_pct": _safe_float(item.get("annualized_return_pct")),
+                "total_return_pct": _safe_float(item.get("total_return_pct")),
+                "max_drawdown_pct": _safe_float(item.get("max_drawdown_pct")),
+                "closed_trades": _safe_int(item.get("closed_trades")),
+                "win_rate": _safe_float(item.get("win_rate")),
+                "return_drawdown_ratio": _safe_float(item.get("return_drawdown_ratio")),
+                "detail_url": f"/research/runs/{quote_plus(str(run_id))}" if run_id else None,
+            }
+        )
+    rows.sort(key=lambda item: item.get("rank") or 999999)
+    return rows
+
+
 def build_runs_index_context(root: Path | None = None) -> dict[str, Any]:
     runs = list_backtest_runs(root=root)
     return {
         "page_title": "回测实验台",
         "runs": runs,
         "has_runs": bool(runs),
+    }
+
+
+def build_leaderboard_context(root: Path | None = None) -> dict[str, Any]:
+    leaderboard_rows = load_active_leaderboard(root=root)
+    return {
+        "page_title": "前 10 策略榜单",
+        "leaderboard_rows": leaderboard_rows,
+        "has_rows": bool(leaderboard_rows),
     }
 
 

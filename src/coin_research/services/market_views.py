@@ -6,7 +6,7 @@ import pandas as pd
 
 from ..data import timeframe_to_milliseconds
 from ..db import load_market_summary, load_ohlcv, load_symbol_cards
-from .backtest_runs import list_backtest_runs, load_backtest_run
+from .backtest_runs import list_backtest_runs, load_active_leaderboard, load_backtest_run
 
 
 def _safe_timestamp_label(value: Any) -> str | None:
@@ -22,6 +22,7 @@ def build_market_home_context(*, exchange_name: str = "binance", quote: str = "U
     summary = load_market_summary(exchange_name=exchange_name, quote=quote, dsn=dsn)
     cards = load_symbol_cards(exchange_name=exchange_name, quote=quote, dsn=dsn)
     latest_runs = list_backtest_runs()[:8]
+    leaderboard_rows = load_active_leaderboard()[:10]
     timeframe_rows = [
         {
             **row,
@@ -31,7 +32,7 @@ def build_market_home_context(*, exchange_name: str = "binance", quote: str = "U
         for row in summary["timeframes"]
     ]
     return {
-        "page_title": "Crypto Research Dashboard",
+        "page_title": "量化研究总览",
         "exchange_name": exchange_name,
         "quote": quote,
         "market_summary": summary,
@@ -39,6 +40,7 @@ def build_market_home_context(*, exchange_name: str = "binance", quote: str = "U
         "timeframe_rows": timeframe_rows,
         "featured_symbols": cards.sort_values(["rows_1d", "rows_4h", "symbol"], ascending=[False, False, True]).head(12).to_dict(orient="records") if not cards.empty else [],
         "latest_runs": latest_runs,
+        "leaderboard_rows": leaderboard_rows,
     }
 
 

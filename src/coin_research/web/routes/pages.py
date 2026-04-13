@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
-from ...services.backtest_runs import build_run_detail_context, build_runs_index_context, build_strategy_compare_context
+from ...services.backtest_runs import build_leaderboard_context, build_run_detail_context, build_runs_index_context, build_strategy_compare_context
 from ...services.market_views import build_asset_detail_context, build_market_home_context, build_symbol_list_context
 from ..templating import TEMPLATES
 
@@ -52,6 +52,11 @@ def research_run_detail(request: Request, run_id: str) -> HTMLResponse:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return _render(request, template_name="pages/research_run_detail.html", context=context)
+
+
+@router.get("/research/leaderboard", response_class=HTMLResponse)
+def research_leaderboard(request: Request) -> HTMLResponse:
+    return _render(request, template_name="pages/research_leaderboard.html", context=build_leaderboard_context())
 
 
 @router.get("/research/strategies/{strategy_key}", response_class=HTMLResponse)

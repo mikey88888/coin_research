@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{ page_title or "Crypto Research" }}</title>
+    <title>{{ page_title or "量化研究" }}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}" />
     <script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js" defer></script>
     <script src="{{ url_for('static', path='js/app.js') }}" defer></script>
@@ -12,13 +12,14 @@
     <header class="site-header">
       <div class="header-inner">
         <div>
-          <a class="brand" href="/">Coin Research</a>
-          <p class="tagline">Top 100 crypto market dashboard, storage, and strategy lab</p>
+          <a class="brand" href="/">量化研究台</a>
+          <p class="tagline">币种数据、回测结果与策略候选的统一查看入口</p>
         </div>
         <nav class="site-nav">
           <a class="nav-link" href="/">总览</a>
+          <a class="nav-link" href="/research/leaderboard">前 10 榜单</a>
           <a class="nav-link" href="/markets/crypto">币种</a>
-          <a class="nav-link" href="/research/runs">实验</a>
+          <a class="nav-link" href="/research/runs">回测</a>
           <a class="nav-link" href="/research/strategies/five-wave-reversal">策略比较</a>
         </nav>
       </div>

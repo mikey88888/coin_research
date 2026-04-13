@@ -5,10 +5,62 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from coin_research.services.market_views import build_asset_detail_context
+from coin_research.services.market_views import build_asset_detail_context, build_market_home_context
 
 
 class MarketViewsTests(unittest.TestCase):
+    def test_market_home_exposes_active_leaderboard(self) -> None:
+        summary = {
+            "tracked_symbols": 2,
+            "total_rows": 20,
+            "latest_sync_at": pd.Timestamp("2026-01-01 00:00:00", tz="UTC"),
+            "timeframes": [
+                {
+                    "timeframe": "1d",
+                    "rows": 20,
+                    "symbol_count": 2,
+                    "first_bar": pd.Timestamp("2025-01-01 00:00:00", tz="UTC"),
+                    "last_bar": pd.Timestamp("2026-01-01 00:00:00", tz="UTC"),
+                }
+            ],
+        }
+        cards = pd.DataFrame(
+            [
+                {
+                    "symbol": "BTC/USDT",
+                    "rows_1d": 10,
+                    "rows_4h": 20,
+                    "rows_30m": 30,
+                    "rows_5m": 40,
+                    "latest_sync_at": pd.Timestamp("2026-01-01 00:00:00", tz="UTC"),
+                }
+            ]
+        )
+        leaderboard = [
+            {
+                "rank": 1,
+                "strategy_label": "五浪加速下跌反转",
+                "timeframe": "30m",
+                "exit_mode": "three_wave_exit",
+                "return_drawdown_ratio": 3.2,
+                "annualized_return_pct": 120.0,
+                "max_drawdown_pct": 37.5,
+                "run_id": "run-1",
+                "detail_url": "/research/runs/run-1",
+            }
+        ]
+
+        with patch("coin_research.services.market_views.load_market_summary", return_value=summary), patch(
+            "coin_research.services.market_views.load_symbol_cards", return_value=cards
+        ), patch("coin_research.services.market_views.list_backtest_runs", return_value=[]), patch(
+            "coin_research.services.market_views.load_active_leaderboard", return_value=leaderboard
+        ):
+            context = build_market_home_context()
+
+        self.assertEqual(context["page_title"], "量化研究总览")
+        self.assertEqual(context["leaderboard_rows"], leaderboard)
+        self.assertEqual(context["featured_symbols"][0]["symbol"], "BTC/USDT")
+
     def test_asset_detail_handles_non_wave_trade_overlay(self) -> None:
         frame = pd.DataFrame(
             {
