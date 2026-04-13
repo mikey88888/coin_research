@@ -12,6 +12,23 @@ from .exchanges import create_exchange
 OHLCV_COLUMNS = ["timestamp", "open", "high", "low", "close", "volume"]
 
 
+def _validate_positive_limit(limit: int) -> int:
+    if limit <= 0:
+        raise ValueError(f"limit must be > 0, got {limit}")
+    return limit
+
+
+def _validate_since(since: int | None) -> int | None:
+    if since is not None and since < 0:
+        raise ValueError(f"since must be >= 0, got {since}")
+    return since
+
+
+def _validate_timeframe(timeframe: str) -> str:
+    timeframe_to_milliseconds(timeframe)
+    return timeframe
+
+
 def timeframe_to_milliseconds(timeframe: str) -> int:
     match = re.fullmatch(r"(\d+)([smhdwM])", timeframe)
     if not match:
@@ -57,6 +74,9 @@ def fetch_ohlcv_frame_from_exchange(
     limit: int = 500,
     since: int | None = None,
 ) -> pd.DataFrame:
+    timeframe = _validate_timeframe(timeframe)
+    limit = _validate_positive_limit(limit)
+    since = _validate_since(since)
     rows = exchange.fetch_ohlcv(symbol, timeframe=timeframe, since=since, limit=limit)
     return _ohlcv_rows_to_frame(
         exchange_name=exchange_name,

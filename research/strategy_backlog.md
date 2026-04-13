@@ -15,14 +15,20 @@
 ### 1. Donchian Breakout
 - 类型：趋势跟随
 - 数据需求：OHLCV
+- 状态：tested
 - 假设：突破过去 N 根高点 / 低点后，存在延续性
 - 最小实现：N 通道 + ATR 止损 + 时间或反向信号退出
+- 最新实验：`20260413-103446__4h__bw20_ew10` 已产出最小 account prototype（4h，breakout_window=20，exit_window=10）
+- 当前观察：年化 `20.9934%`、最大回撤 `94.1958%`、return/drawdown `0.2229`、`2455` 笔 closed trades；方向本身可形成稳定交易流，但裸 Donchian 回撤过深，下一步优先考虑 ATR stop 或 regime filter，而不是直接继续微调五浪
 
 ### 2. EMA Trend Following
 - 类型：趋势跟随
 - 数据需求：OHLCV
+- 状态：tested
 - 假设：快慢均线与价格位置可给出低复杂度趋势框架
-- 最小实现：EMA cross + slope filter + ATR stop
+- 最小实现：EMA cross + slope filter + trend break exit
+- 最新实验：`20260413-123611__4h__fw20_sw50_sl5` 已产出最小 account prototype（4h，fast_window=20，slow_window=50，slope_window=5）
+- 当前观察：年化 `43.5367%`、最大回撤 `94.3986%`、return/drawdown `0.4612`、`4774` 笔 closed trades；相对本地历史语料，它明显强于 Donchian 4h baseline（`0.2229`）与 five-wave 4h baseline（`0.2122`），但仍显著落后于 30m five-wave 主结果，且回撤极深。下一步优先考虑 ATR stop / regime filter / 更保守仓位框架，而不是直接做参数细抠
 
 ### 3. Multi-timeframe Trend Alignment
 - 类型：趋势共振

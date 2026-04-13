@@ -10,12 +10,21 @@ from coin_research.sync import (
     SYNC_POLICIES,
     compute_sync_end,
     compute_sync_start,
+    fetch_market_cap_page,
     resolve_top_market_cap_universe,
     sync_symbol_timeframe,
 )
 
 
 class SyncTests(unittest.TestCase):
+    def test_fetch_market_cap_page_requires_positive_page(self) -> None:
+        with self.assertRaisesRegex(ValueError, "page must be a positive integer"):
+            fetch_market_cap_page(page=0)
+
+    def test_fetch_market_cap_page_requires_positive_per_page(self) -> None:
+        with self.assertRaisesRegex(ValueError, "per_page must be a positive integer"):
+            fetch_market_cap_page(page=1, per_page=0)
+
     def test_resolve_top_market_cap_universe_requires_positive_top_n(self) -> None:
         with self.assertRaisesRegex(ValueError, "top_n must be a positive integer"):
             resolve_top_market_cap_universe(

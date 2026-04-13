@@ -98,30 +98,36 @@ def build_asset_detail_context(
     if selected_trade is not None:
         timeframe_ms = timeframe_to_milliseconds(timeframe)
         context_bars = 12
-        start_time = pd.to_datetime(selected_trade["p0_date"], utc=True) - pd.to_timedelta(context_bars * timeframe_ms, unit="ms")
+        has_wave_points = all(
+            f"p{idx}_date" in selected_trade.index and f"p{idx}_price" in selected_trade.index and pd.notna(selected_trade.get(f"p{idx}_date"))
+            for idx in range(6)
+        )
+        start_anchor = pd.to_datetime(selected_trade["p0_date"], utc=True) if has_wave_points else pd.to_datetime(selected_trade["entry_date"], utc=True)
+        start_time = start_anchor - pd.to_timedelta(context_bars * timeframe_ms, unit="ms")
         end_anchor = pd.to_datetime(selected_trade["exit_date"], utc=True) if pd.notna(selected_trade.get("exit_date")) else pd.to_datetime(selected_trade["entry_date"], utc=True)
         end_time = end_anchor + pd.to_timedelta(context_bars * timeframe_ms, unit="ms")
         narrowed = frame[(frame["bar_time"] >= start_time) & (frame["bar_time"] <= end_time)].copy()
         if not narrowed.empty:
             view_frame = narrowed.reset_index(drop=True)
-        wave_points = []
-        for idx in range(6):
-            wave_points.append(
-                {
-                    "time": int(pd.to_datetime(selected_trade[f"p{idx}_date"], utc=True).timestamp()),
-                    "value": float(selected_trade[f"p{idx}_price"]),
-                }
-            )
-            overlay["markers"].append(
-                {
-                    "time": int(pd.to_datetime(selected_trade[f"p{idx}_date"], utc=True).timestamp()),
-                    "position": "aboveBar" if idx % 2 == 0 else "belowBar",
-                    "color": "#2563eb",
-                    "shape": "circle",
-                    "text": f"P{idx}",
-                }
-            )
-        overlay["waveLine"] = wave_points
+        if has_wave_points:
+            wave_points = []
+            for idx in range(6):
+                wave_points.append(
+                    {
+                        "time": int(pd.to_datetime(selected_trade[f"p{idx}_date"], utc=True).timestamp()),
+                        "value": float(selected_trade[f"p{idx}_price"]),
+                    }
+                )
+                overlay["markers"].append(
+                    {
+                        "time": int(pd.to_datetime(selected_trade[f"p{idx}_date"], utc=True).timestamp()),
+                        "position": "aboveBar" if idx % 2 == 0 else "belowBar",
+                        "color": "#2563eb",
+                        "shape": "circle",
+                        "text": f"P{idx}",
+                    }
+                )
+            overlay["waveLine"] = wave_points
         overlay["markers"].append(
             {
                 "time": int(pd.to_datetime(selected_trade["entry_date"], utc=True).timestamp()),

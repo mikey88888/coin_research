@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from coin_research.config import ExchangeConfig
-from coin_research.data import fetch_ohlcv_frame, timeframe_to_milliseconds
+from coin_research.data import fetch_ohlcv_frame, fetch_ohlcv_frame_from_exchange, timeframe_to_milliseconds
 
 
 class DataTests(unittest.TestCase):
@@ -15,6 +15,47 @@ class DataTests(unittest.TestCase):
     def test_timeframe_to_milliseconds_rejects_non_positive_values(self) -> None:
         with self.assertRaisesRegex(ValueError, "timeframe value must be > 0"):
             timeframe_to_milliseconds("0m")
+
+    def test_fetch_ohlcv_frame_rejects_invalid_timeframe(self) -> None:
+        class FakeExchange:
+            def fetch_ohlcv(self, symbol: str, timeframe: str, since=None, limit: int = 500):
+                raise AssertionError("fetch_ohlcv should not be called for invalid timeframe")
+
+        with self.assertRaisesRegex(ValueError, "unsupported timeframe"):
+            fetch_ohlcv_frame_from_exchange(
+                exchange=FakeExchange(),
+                exchange_name="binance",
+                symbol="BTC/USDT",
+                timeframe="bad",
+            )
+
+    def test_fetch_ohlcv_frame_rejects_non_positive_limit(self) -> None:
+        class FakeExchange:
+            def fetch_ohlcv(self, symbol: str, timeframe: str, since=None, limit: int = 500):
+                raise AssertionError("fetch_ohlcv should not be called for invalid limit")
+
+        with self.assertRaisesRegex(ValueError, "limit must be > 0"):
+            fetch_ohlcv_frame_from_exchange(
+                exchange=FakeExchange(),
+                exchange_name="binance",
+                symbol="BTC/USDT",
+                timeframe="1h",
+                limit=0,
+            )
+
+    def test_fetch_ohlcv_frame_rejects_negative_since(self) -> None:
+        class FakeExchange:
+            def fetch_ohlcv(self, symbol: str, timeframe: str, since=None, limit: int = 500):
+                raise AssertionError("fetch_ohlcv should not be called for invalid since")
+
+        with self.assertRaisesRegex(ValueError, "since must be >= 0"):
+            fetch_ohlcv_frame_from_exchange(
+                exchange=FakeExchange(),
+                exchange_name="binance",
+                symbol="BTC/USDT",
+                timeframe="1h",
+                since=-1,
+            )
 
     def test_fetch_ohlcv_frame_normalizes_columns(self) -> None:
         class FakeExchange:

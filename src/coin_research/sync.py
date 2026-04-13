@@ -88,6 +88,9 @@ def _require_positive_int(*, name: str, value: int) -> None:
 
 
 def fetch_market_cap_page(*, page: int, per_page: int = 250, vs_currency: str = "usd") -> pd.DataFrame:
+    _require_positive_int(name="page", value=page)
+    _require_positive_int(name="per_page", value=per_page)
+
     query = urlencode(
         {
             "vs_currency": vs_currency,
