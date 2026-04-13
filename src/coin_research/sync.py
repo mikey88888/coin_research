@@ -213,6 +213,7 @@ def sync_symbol_timeframe(
     progress: Callable[[str], None] | None = None,
     batch_limit: int = 1000,
 ) -> SyncBatchResult:
+    _require_positive_int(name="batch_limit", value=batch_limit)
     timeframe = policy.timeframe
     start_time = compute_sync_start(
         conn=conn,

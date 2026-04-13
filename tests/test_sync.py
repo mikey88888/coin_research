@@ -73,6 +73,19 @@ class SyncTests(unittest.TestCase):
             )
         self.assertEqual(start, datetime(2026, 4, 6, 10, 25, tzinfo=UTC))
 
+    def test_sync_symbol_timeframe_requires_positive_batch_limit(self) -> None:
+        policy = next(item for item in SYNC_POLICIES if item.timeframe == "5m")
+        with self.assertRaisesRegex(ValueError, "batch_limit must be a positive integer"):
+            sync_symbol_timeframe(
+                conn=object(),
+                exchange=object(),
+                exchange_name="binance",
+                symbol="BTC/USDT",
+                policy=policy,
+                now=datetime(2026, 4, 6, 10, 31, tzinfo=UTC),
+                batch_limit=0,
+            )
+
     def test_sync_symbol_timeframe_paginates_and_filters_open_bar(self) -> None:
         policy = next(item for item in SYNC_POLICIES if item.timeframe == "5m")
         now = datetime(2026, 4, 6, 10, 31, tzinfo=UTC)

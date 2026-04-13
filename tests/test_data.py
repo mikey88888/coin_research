@@ -4,10 +4,18 @@ import unittest
 from unittest.mock import patch
 
 from coin_research.config import ExchangeConfig
-from coin_research.data import fetch_ohlcv_frame
+from coin_research.data import fetch_ohlcv_frame, timeframe_to_milliseconds
 
 
 class DataTests(unittest.TestCase):
+    def test_timeframe_to_milliseconds_supports_standard_values(self) -> None:
+        self.assertEqual(timeframe_to_milliseconds("15m"), 900_000)
+        self.assertEqual(timeframe_to_milliseconds("1d"), 86_400_000)
+
+    def test_timeframe_to_milliseconds_rejects_non_positive_values(self) -> None:
+        with self.assertRaisesRegex(ValueError, "timeframe value must be > 0"):
+            timeframe_to_milliseconds("0m")
+
     def test_fetch_ohlcv_frame_normalizes_columns(self) -> None:
         class FakeExchange:
             def fetch_ohlcv(self, symbol: str, timeframe: str, since=None, limit: int = 500):
