@@ -72,8 +72,11 @@
 ### 8. Short-term Reversal Basket
 - 类型：横截面反转
 - 数据需求：多币种 OHLCV
+- 状态：tested
 - 假设：极端弱势币种在短窗口存在反弹修复
-- 最小实现：过去 1-3 日跌幅分组 + next window 收益测试
+- 最小实现：过去 N bars 收益倒序排序 + 买入 bottom bucket + 固定持有到下次换仓退出
+- 最新实验：`20260426-013801__4h__lb24_bot3_h12_rb12_md5` 已产出最小 account prototype（4h，lookback_bars=24，bottom_k=3，hold_bars=12，rebalance_interval=12，min_drop_pct=5.0）
+- 当前观察：这个方向在大多数 1d / 4h 首轮参数上都明显为负，说明“直接买最弱者等反弹”在手续费后很脆弱。当前方向内最佳结果来自 4h 配置 `lb24/bot3/h12/rb12/md5`：年化 `8.5137%`、最大回撤 `55.3162%`、return/drawdown `0.1539`、`2148` 笔 closed trades、total return `102.4951%`。它虽然好于本方向其它配置并保持了相对可控的回撤，但仍明显弱于当前非五浪主力候选（Momentum+Volatility `0.7528`、Cross-sectional Relative Strength `0.5007`、EMA `0.4612`）以及 Donchian 4h baseline（`0.2229`）。结论是：横截面“弱者反弹”目前只算负样本边界探索；若以后继续，应优先引入 regime / liquidity / volume shock 过滤，而不是继续裸刷参数。
 
 ### 9. Regime Filter
 - 类型：市场状态过滤
