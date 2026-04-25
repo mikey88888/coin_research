@@ -11,10 +11,18 @@ except ImportError:  # pragma: no cover - dependency installed after `uv sync`
         return False
 
 
-def _as_bool(value: str | None, default: bool) -> bool:
+def _as_bool(value: str | None, default: bool, *, env_name: str) -> bool:
     if value is None:
         return default
-    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+    raise ValueError(
+        f"{env_name} must be a boolean value "
+        f"(expected one of: 1,true,yes,y,on,0,false,no,n,off), got {value.strip()!r}"
+    )
 
 
 def _normalize_exchange_name(value: str | None, *, default: str, env_name: str) -> str:
@@ -66,7 +74,11 @@ def load_settings() -> ExchangeConfig:
         ),
         api_key=os.getenv("COIN_RESEARCH_API_KEY") or None,
         api_secret=os.getenv("COIN_RESEARCH_API_SECRET") or None,
-        enable_rate_limit=_as_bool(os.getenv("COIN_RESEARCH_ENABLE_RATE_LIMIT"), True),
+        enable_rate_limit=_as_bool(
+            os.getenv("COIN_RESEARCH_ENABLE_RATE_LIMIT"),
+            True,
+            env_name="COIN_RESEARCH_ENABLE_RATE_LIMIT",
+        ),
         timeout_ms=_as_positive_int(
             os.getenv("COIN_RESEARCH_TIMEOUT_MS"),
             default=10000,

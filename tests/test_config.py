@@ -44,6 +44,16 @@ class ConfigTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "COIN_RESEARCH_TIMEOUT_MS must be an integer"):
                 load_settings()
 
+    def test_load_settings_accepts_false_rate_limit_aliases(self) -> None:
+        with patch.dict("os.environ", {"COIN_RESEARCH_ENABLE_RATE_LIMIT": " OFF "}, clear=False):
+            settings = load_settings()
+        self.assertFalse(settings.enable_rate_limit)
+
+    def test_load_settings_rejects_invalid_rate_limit_boolean(self) -> None:
+        with patch.dict("os.environ", {"COIN_RESEARCH_ENABLE_RATE_LIMIT": "maybe"}, clear=False):
+            with self.assertRaisesRegex(ValueError, "COIN_RESEARCH_ENABLE_RATE_LIMIT must be a boolean value"):
+                load_settings()
+
     def test_load_settings_rejects_non_positive_timeout(self) -> None:
         with patch.dict("os.environ", {"COIN_RESEARCH_TIMEOUT_MS": "0"}, clear=False):
             with self.assertRaisesRegex(ValueError, "COIN_RESEARCH_TIMEOUT_MS must be > 0"):
