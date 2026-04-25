@@ -69,7 +69,13 @@ class DbModuleTests(unittest.TestCase):
             mocked_load.assert_called()
 
         with patch("coin_research.db.load_project_env") as mocked_load:
-            with patch.dict(os.environ, {"COIN_RESEARCH_PG_DSN": "postgresql://demo"}):
+            with patch.dict(os.environ, {"COIN_RESEARCH_PG_DSN": "   \t  "}, clear=True):
+                with self.assertRaisesRegex(RuntimeError, "COIN_RESEARCH_PG_DSN is not set"):
+                    db.get_pg_dsn()
+            mocked_load.assert_called()
+
+        with patch("coin_research.db.load_project_env") as mocked_load:
+            with patch.dict(os.environ, {"COIN_RESEARCH_PG_DSN": "  postgresql://demo  "}, clear=True):
                 self.assertEqual(db.get_pg_dsn(), "postgresql://demo")
             mocked_load.assert_called()
 

@@ -18,6 +18,13 @@ def _safe_timestamp_label(value: Any) -> str | None:
     return timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
 
 
+def _format_exit_marker_label(exit_reason: Any) -> str:
+    reason = str(exit_reason).strip() if exit_reason is not None else ""
+    if not reason or reason.lower() == "nan":
+        return "卖出"
+    return f"卖出 · {reason}"
+
+
 def build_market_home_context(*, exchange_name: str = "binance", quote: str = "USDT", dsn: str | None = None) -> dict[str, Any]:
     summary = load_market_summary(exchange_name=exchange_name, quote=quote, dsn=dsn)
     cards = load_symbol_cards(exchange_name=exchange_name, quote=quote, dsn=dsn)
@@ -136,7 +143,7 @@ def build_asset_detail_context(
                 "position": "belowBar",
                 "color": "#16a34a",
                 "shape": "arrowUp",
-                "text": "BUY",
+                "text": "买入",
             }
         )
         if pd.notna(selected_trade.get("exit_date")):
@@ -146,7 +153,7 @@ def build_asset_detail_context(
                     "position": "aboveBar",
                     "color": "#dc2626",
                     "shape": "arrowDown",
-                    "text": "SELL",
+                    "text": _format_exit_marker_label(selected_trade.get("exit_reason")),
                 }
             )
         selected_trade_summary = {
@@ -174,7 +181,7 @@ def build_asset_detail_context(
     ]
     timeframe_options = ["1d", "4h", "30m", "5m"]
     return {
-        "page_title": f"{symbol} {timeframe}",
+        "page_title": f"{symbol} {timeframe} 行情详情",
         "exchange_name": exchange_name,
         "symbol": symbol,
         "timeframe": timeframe,

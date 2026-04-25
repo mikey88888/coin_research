@@ -84,9 +84,9 @@ CREATE TABLE IF NOT EXISTS market_data.crypto_symbol_stats (
 def get_pg_dsn() -> str:
     load_project_env()
     dsn = os.environ.get("COIN_RESEARCH_PG_DSN")
-    if not dsn:
+    if dsn is None or not dsn.strip():
         raise RuntimeError("COIN_RESEARCH_PG_DSN is not set")
-    return dsn
+    return dsn.strip()
 
 
 def connect_pg(dsn: str | None = None) -> psycopg.Connection:

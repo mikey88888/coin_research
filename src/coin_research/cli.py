@@ -18,9 +18,37 @@ def _positive_int_arg(raw: str) -> int:
     return value
 
 
+def _nonnegative_int_arg(raw: str) -> int:
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"must be an integer, got {raw!r}") from exc
+    if value < 0:
+        raise argparse.ArgumentTypeError(f"must be a non-negative integer, got {value}")
+    return value
+
+
+def _normalize_exchange_override(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    normalized = raw.strip().lower()
+    if not normalized:
+        raise ValueError("--exchange must not be blank")
+    return normalized
+
+
+def _normalize_quote_arg(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    normalized = raw.strip().upper()
+    if not normalized:
+        raise ValueError("--quote must not be blank")
+    return normalized
+
+
 def _build_config(args: argparse.Namespace) -> ExchangeConfig:
     base = load_settings()
-    exchange = getattr(args, "exchange", None) or base.exchange
+    exchange = _normalize_exchange_override(getattr(args, "exchange", None)) or base.exchange
     return ExchangeConfig(
         exchange=exchange,
         api_key=base.api_key,
@@ -45,7 +73,7 @@ def main() -> None:
     ohlcv_parser.add_argument("--symbol", required=True, help="Market symbol, for example BTC/USDT")
     ohlcv_parser.add_argument("--timeframe", default="1h", help="CCXT timeframe, for example 15m, 1h, 4h, 1d")
     ohlcv_parser.add_argument("--limit", type=_positive_int_arg, default=200, help="Number of candles")
-    ohlcv_parser.add_argument("--since", type=int, default=None, help="Unix ms start time")
+    ohlcv_parser.add_argument("--since", type=_nonnegative_int_arg, default=None, help="Unix ms start time")
     ohlcv_parser.add_argument("--output", default=None, help="Optional CSV output path")
     ohlcv_parser.add_argument("--to-db", action="store_true", help="Store candles in PostgreSQL")
 
@@ -67,13 +95,14 @@ def main() -> None:
 
     try:
         config = _build_config(args)
+        normalized_quote = _normalize_quote_arg(getattr(args, "quote", None))
     except ValueError as exc:
         parser.error(str(exc))
 
     if args.command == "markets":
         frame = list_markets(exchange_name=config.exchange, config=config)
-        if args.quote:
-            frame = frame[frame["quote"].astype("string") == args.quote]
+        if normalized_quote is not None:
+            frame = frame[frame["quote"].astype("string").str.upper() == normalized_quote]
         if args.to_db:
             with connect_pg() as conn:
                 ensure_schema(conn)
@@ -111,7 +140,7 @@ def main() -> None:
                 conn=conn,
                 config=config,
                 top_n=args.top,
-                quote=args.quote,
+                quote=normalized_quote if normalized_quote is not None else args.quote,
                 symbols_limit=args.symbols_limit,
                 progress=print,
             )

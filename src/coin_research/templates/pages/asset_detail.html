@@ -13,10 +13,10 @@
     </div>
   </div>
   <div class="metric-row">
-    <div class="stat-card"><span>Latest Close</span><strong>{{ latest_close | format_number(4) }}</strong></div>
-    <div class="stat-card"><span>Latest Bar</span><strong>{{ latest_bar_time }}</strong></div>
-    <div class="stat-card"><span>Rows</span><strong>{{ row_count | format_int }}</strong></div>
-    <div class="stat-card"><span>First Bar</span><strong>{{ first_bar_time }}</strong></div>
+    <div class="stat-card"><span>最新收盘价</span><strong>{{ latest_close | format_number(4) }}</strong></div>
+    <div class="stat-card"><span>最新 K 线时间</span><strong>{{ latest_bar_time }}</strong></div>
+    <div class="stat-card"><span>总行数</span><strong>{{ row_count | format_int }}</strong></div>
+    <div class="stat-card"><span>首根时间</span><strong>{{ first_bar_time }}</strong></div>
   </div>
 </section>
 
@@ -24,25 +24,25 @@
 <section class="panel">
   <div class="panel-header">
     <div>
-      <p class="eyebrow">Selected Trade</p>
+      <p class="eyebrow">选中交易</p>
       <h2>{{ selected_trade.trade_id }}</h2>
     </div>
     <a class="text-link mono-link" href="/research/runs/{{ selected_trade.run_id }}">返回回测</a>
   </div>
   <div class="metric-row">
-    <div class="stat-card"><span>Entry</span><strong>{{ selected_trade.entry_date }}</strong></div>
-    <div class="stat-card"><span>Exit</span><strong>{{ selected_trade.exit_date or "open" }}</strong></div>
-    <div class="stat-card"><span>Entry Price</span><strong>{{ selected_trade.entry_price | format_number(4) }}</strong></div>
-    <div class="stat-card"><span>Exit Price</span><strong>{{ selected_trade.exit_price | format_number(4) }}</strong></div>
-    <div class="stat-card"><span>Return</span><strong>{{ selected_trade.return_pct | format_pct }}</strong></div>
-    <div class="stat-card"><span>Exit Reason</span><strong>{{ selected_trade.exit_reason or "n/a" }}</strong></div>
+    <div class="stat-card"><span>入场时间</span><strong>{{ selected_trade.entry_date }}</strong></div>
+    <div class="stat-card"><span>出场时间</span><strong>{{ selected_trade.exit_date or "持有中" }}</strong></div>
+    <div class="stat-card"><span>入场价格</span><strong>{{ selected_trade.entry_price | format_number(4) }}</strong></div>
+    <div class="stat-card"><span>出场价格</span><strong>{{ selected_trade.exit_price | format_number(4) }}</strong></div>
+    <div class="stat-card"><span>收益率</span><strong>{{ selected_trade.return_pct | format_pct }}</strong></div>
+    <div class="stat-card"><span>出场原因</span><strong>{{ selected_trade.exit_reason or "n/a" }}</strong></div>
   </div>
 </section>
 {% endif %}
 
 <section class="panel">
   <div class="panel-header">
-    <h2>K线</h2>
+    <h2>K 线图</h2>
   </div>
   <div
     id="price-chart"
@@ -53,11 +53,11 @@
 </section>
 
 <section class="panel">
-  <h2>Recent Bars</h2>
+  <h2>最近 K 线</h2>
   <div class="table-wrap">
     <table class="data-table">
       <thead>
-        <tr><th>Bar Time</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th></tr>
+        <tr><th>K 线时间</th><th>开盘</th><th>最高</th><th>最低</th><th>收盘</th><th>成交量</th></tr>
       </thead>
       <tbody>
         {% for row in recent_rows %}

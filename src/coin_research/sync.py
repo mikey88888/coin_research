@@ -87,6 +87,13 @@ def _require_positive_int(*, name: str, value: int) -> None:
         raise ValueError(f"{name} must be a positive integer, got {value}")
 
 
+def _normalize_quote_asset(value: str) -> str:
+    normalized = value.strip().upper()
+    if not normalized:
+        raise ValueError("quote must be a non-empty asset code")
+    return normalized
+
+
 def fetch_market_cap_page(*, page: int, per_page: int = 250, vs_currency: str = "usd") -> pd.DataFrame:
     _require_positive_int(name="page", value=page)
     _require_positive_int(name="per_page", value=per_page)
@@ -122,11 +129,12 @@ def resolve_top_market_cap_universe(
 ) -> pd.DataFrame:
     _require_positive_int(name="top_n", value=top_n)
     _require_positive_int(name="max_candidate_pages", value=max_candidate_pages)
+    normalized_quote = _normalize_quote_asset(quote)
 
     spot_markets = markets_frame.copy()
     spot_markets = spot_markets[spot_markets["spot"] == True]
-    spot_markets = spot_markets[spot_markets["quote"].astype("string").str.upper() == quote.upper()]
-    spot_markets = spot_markets[spot_markets["base"].astype("string").str.upper() != quote.upper()]
+    spot_markets = spot_markets[spot_markets["quote"].astype("string").str.upper() == normalized_quote]
+    spot_markets = spot_markets[spot_markets["base"].astype("string").str.upper() != normalized_quote]
     spot_markets = spot_markets[spot_markets["active"] != False]
     spot_markets = spot_markets.sort_values(["symbol"]).reset_index(drop=True)
 
@@ -290,6 +298,9 @@ def sync_top_market_cap_ohlcv(
     symbols_limit: int | None = None,
     progress: Callable[[str], None] | None = None,
 ) -> dict[str, object]:
+    if symbols_limit is not None:
+        _require_positive_int(name="symbols_limit", value=symbols_limit)
+    normalized_quote = _normalize_quote_asset(quote)
     active_conn = conn
     exchange = create_exchange(config)
     markets_frame = list_markets_from_exchange(exchange=exchange, exchange_name=config.exchange)
@@ -300,7 +311,7 @@ def sync_top_market_cap_ohlcv(
         exchange_name=config.exchange,
         markets_frame=markets_frame,
         top_n=top_n,
-        quote=quote,
+        quote=normalized_quote,
     )
     if universe.empty:
         raise RuntimeError("no market-cap universe members matched exchange markets")
@@ -364,7 +375,7 @@ def sync_top_market_cap_ohlcv(
                 )
 
     summary_frame = pd.DataFrame(summaries)
-    refresh_dashboard_stats(active_conn, exchange_name=config.exchange, quote=quote)
+    refresh_dashboard_stats(active_conn, exchange_name=config.exchange, quote=normalized_quote)
     if active_conn is not conn:
         active_conn.close()
     return {

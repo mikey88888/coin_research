@@ -71,6 +71,40 @@
       "source_summary": "reports/backtests/five-wave-reversal/20260406-215322__5m__three_wave_exit/summary.json"
     },
     {
+      "strategy_key": "momentum-volatility-composite",
+      "strategy_label": "Momentum + Volatility Composite",
+      "timeframe": "1d",
+      "exit_mode": "rebalance_exit",
+      "engine_type": "account",
+      "run_id": "20260413-204337__1d__lb60_vw60_top5_h5_rb5_mv0p5",
+      "annualized_return_pct": 45.0105,
+      "total_return_pct": 2373.2734,
+      "max_drawdown_pct": 59.7927,
+      "closed_trades": 1690,
+      "win_rate": 44.3787,
+      "return_drawdown_ratio": 0.7528,
+      "source_summary": "reports/backtests/momentum-volatility-composite/20260413-204337__1d__lb60_vw60_top5_h5_rb5_mv0p5/summary.json",
+      "stability": "stable",
+      "rank": 4
+    },
+    {
+      "strategy_key": "cross-sectional-relative-strength",
+      "strategy_label": "Cross-sectional Relative Strength",
+      "timeframe": "1d",
+      "exit_mode": "rebalance_exit",
+      "engine_type": "account",
+      "run_id": "20260413-184155__1d__lb60_top5_h10_rb10",
+      "annualized_return_pct": 33.8572,
+      "total_return_pct": 1139.4441,
+      "max_drawdown_pct": 67.6178,
+      "closed_trades": 892,
+      "win_rate": 45.9641,
+      "return_drawdown_ratio": 0.5007,
+      "source_summary": "reports/backtests/cross-sectional-relative-strength/20260413-184155__1d__lb60_top5_h10_rb10/summary.json",
+      "stability": "stable",
+      "rank": 5
+    },
+    {
       "strategy_key": "ema-trend-following",
       "strategy_label": "EMA Trend Following",
       "timeframe": "4h",
@@ -85,7 +119,24 @@
       "return_drawdown_ratio": 0.4612,
       "source_summary": "reports/backtests/ema-trend-following/20260413-123611__4h__fw20_sw50_sl5/summary.json",
       "stability": "stable",
-      "rank": 4
+      "rank": 6
+    },
+    {
+      "strategy_key": "volatility-compression-breakout",
+      "strategy_label": "Volatility Compression Breakout",
+      "timeframe": "4h",
+      "exit_mode": "squeeze_breakout_channel_or_time_stop",
+      "engine_type": "account",
+      "run_id": "20260413-164501__4h__sw20_bw55_ew20_sq0p2_h30",
+      "annualized_return_pct": 20.5218,
+      "total_return_pct": 401.2076,
+      "max_drawdown_pct": 82.1394,
+      "closed_trades": 1268,
+      "win_rate": 41.7981,
+      "return_drawdown_ratio": 0.2498,
+      "source_summary": "reports/backtests/volatility-compression-breakout/20260413-164501__4h__sw20_bw55_ew20_sq0p2_h30/summary.json",
+      "stability": "stable",
+      "rank": 7
     },
     {
       "strategy_key": "donchian-breakout",
@@ -102,10 +153,10 @@
       "return_drawdown_ratio": 0.2229,
       "source_summary": "reports/backtests/donchian-breakout/20260413-103446__4h__bw20_ew10/summary.json",
       "stability": "stable",
-      "rank": 5
+      "rank": 8
     },
     {
-      "rank": 6,
+      "rank": 9,
       "stability": "stable",
       "strategy_key": "five-wave-reversal",
       "strategy_label": "五浪加速下跌反转",
@@ -122,7 +173,7 @@
       "source_summary": "reports/backtests/five-wave-reversal/20260406-201638__4h__three_wave_exit/summary.json"
     },
     {
-      "rank": 7,
+      "rank": 10,
       "stability": "exploratory",
       "strategy_key": "five-wave-reversal",
       "strategy_label": "五浪加速下跌反转",
@@ -137,40 +188,6 @@
       "win_rate": 83.3333,
       "return_drawdown_ratio": 0.6814,
       "source_summary": "reports/backtests/five-wave-reversal/20260406-201604__4h__three_wave_exit/summary.json"
-    },
-    {
-      "rank": 8,
-      "stability": "exploratory",
-      "strategy_key": "five-wave-reversal",
-      "strategy_label": "五浪加速下跌反转",
-      "timeframe": "1d",
-      "exit_mode": "three_wave_exit",
-      "engine_type": "account",
-      "run_id": "20260406-201604__1d__three_wave_exit",
-      "annualized_return_pct": 0.0,
-      "total_return_pct": 0.0,
-      "max_drawdown_pct": 0.0,
-      "closed_trades": 0,
-      "win_rate": null,
-      "return_drawdown_ratio": 0.0,
-      "source_summary": "reports/backtests/five-wave-reversal/20260406-201604__1d__three_wave_exit/summary.json"
-    },
-    {
-      "rank": 9,
-      "stability": "exploratory",
-      "strategy_key": "five-wave-reversal",
-      "strategy_label": "五浪加速下跌反转",
-      "timeframe": "1d",
-      "exit_mode": "three_wave_exit",
-      "engine_type": "account",
-      "run_id": "20260406-201638__1d__three_wave_exit",
-      "annualized_return_pct": -0.1686,
-      "total_return_pct": -1.4465,
-      "max_drawdown_pct": 5.23,
-      "closed_trades": 2,
-      "win_rate": 0.0,
-      "return_drawdown_ratio": -0.0322,
-      "source_summary": "reports/backtests/five-wave-reversal/20260406-201638__1d__three_wave_exit/summary.json"
     }
   ]
 }

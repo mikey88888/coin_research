@@ -19,7 +19,7 @@
           <td>{{ "稳定" if row.stability == "stable" else "探索" }}</td>
           <td>{{ row.strategy_label }}</td>
           <td><span class="pill">{{ row.timeframe }}</span></td>
-          <td>{{ row.exit_mode }}</td>
+          <td>{{ row.display_exit_mode }}</td>
           <td>{{ row.return_drawdown_ratio | format_number(4) }}</td>
           <td>{{ row.total_return_pct | format_pct }}</td>
           <td>{{ row.annualized_return_pct | format_pct }}</td>

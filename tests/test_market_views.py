@@ -97,7 +97,7 @@ class MarketViewsTests(unittest.TestCase):
         self.assertEqual(context["selected_trade"]["trade_id"], "trade-1")
         self.assertEqual(context["selected_trade"]["exit_reason"], "trend_break")
         self.assertEqual(context["chart_overlay"]["waveLine"], [])
-        self.assertEqual([item["text"] for item in context["chart_overlay"]["markers"]], ["BUY", "SELL"])
+        self.assertEqual([item["text"] for item in context["chart_overlay"]["markers"]], ["买入", "卖出 · trend_break"])
         self.assertGreater(len(context["chart_rows"]), 0)
 
 

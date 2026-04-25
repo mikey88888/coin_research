@@ -19,7 +19,7 @@ class ConfigTests(unittest.TestCase):
         with patch.dict(
             "os.environ",
             {
-                "COIN_RESEARCH_EXCHANGE": "okx",
+                "COIN_RESEARCH_EXCHANGE": " OKX ",
                 "COIN_RESEARCH_API_KEY": "demo-key",
                 "COIN_RESEARCH_API_SECRET": "demo-secret",
                 "COIN_RESEARCH_ENABLE_RATE_LIMIT": "false",
@@ -33,6 +33,11 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(settings.api_secret, "demo-secret")
         self.assertFalse(settings.enable_rate_limit)
         self.assertEqual(settings.timeout_ms, 15000)
+
+    def test_load_settings_rejects_blank_exchange(self) -> None:
+        with patch.dict("os.environ", {"COIN_RESEARCH_EXCHANGE": "   "}, clear=False):
+            with self.assertRaisesRegex(ValueError, "COIN_RESEARCH_EXCHANGE must not be blank"):
+                load_settings()
 
     def test_load_settings_rejects_non_integer_timeout(self) -> None:
         with patch.dict("os.environ", {"COIN_RESEARCH_TIMEOUT_MS": "fast"}, clear=False):

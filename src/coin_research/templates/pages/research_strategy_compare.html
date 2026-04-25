@@ -3,20 +3,20 @@
 <section class="panel">
   <div class="panel-header">
     <div>
-      <p class="eyebrow">Strategy</p>
+      <p class="eyebrow">策略比较</p>
       <h1>{{ strategy_label }}</h1>
     </div>
   </div>
   <div class="table-wrap">
     <table class="data-table">
       <thead>
-        <tr><th>周期</th><th>退出</th><th>最新收益</th><th>年化</th><th>回撤</th><th>胜率</th><th>闭合交易</th><th>运行</th></tr>
+        <tr><th>周期</th><th>退出方式</th><th>最新收益</th><th>年化</th><th>回撤</th><th>胜率</th><th>闭合交易</th><th>运行</th></tr>
       </thead>
       <tbody>
         {% for row in matrix_rows %}
         <tr>
           <td><span class="pill">{{ row.timeframe }}</span></td>
-          <td>{{ row.exit_mode }}</td>
+          <td>{{ row.display_exit_mode }}</td>
           <td>{{ row.latest_total_return_pct | format_pct }}</td>
           <td>{{ row.latest_annualized_return_pct | format_pct }}</td>
           <td>{{ row.latest_max_drawdown_pct | format_pct }}</td>

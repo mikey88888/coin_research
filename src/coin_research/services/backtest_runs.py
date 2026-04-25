@@ -50,6 +50,44 @@ def _format_timestamp(value: Any) -> str | None:
     return timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
 
 
+def _strategy_label_zh(value: Any) -> str:
+    mapping = {
+        "EMA Trend Following": "EMA 趋势跟随",
+        "Donchian Breakout": "Donchian 通道突破",
+    }
+    text = str(value) if value not in (None, "") else "未命名策略"
+    return mapping.get(text, text)
+
+
+def _engine_type_label(value: Any) -> str:
+    mapping = {
+        "account": "账户",
+        "signal": "信号",
+    }
+    text = str(value) if value not in (None, "") else "未知"
+    return mapping.get(text, text)
+
+
+def _exit_mode_label(value: Any) -> str:
+    mapping = {
+        "three_wave_exit": "三浪出场",
+        "trailing_stop": "移动止损",
+        "trend_break": "趋势破位",
+        "channel_exit": "通道离场",
+    }
+    text = str(value) if value not in (None, "") else "未设置"
+    return mapping.get(text, text)
+
+
+def _trade_status_label(value: Any) -> str:
+    mapping = {
+        "open": "持有中",
+        "closed": "已平仓",
+    }
+    text = str(value) if value not in (None, "") else "未知"
+    return mapping.get(text, text)
+
+
 def _load_optional_csv(path_value: str | None) -> pd.DataFrame:
     if not path_value:
         return pd.DataFrame()
@@ -137,13 +175,18 @@ def list_backtest_runs(root: Path | None = None) -> list[dict[str, Any]]:
                 _load_optional_csv(payload.get("orders_path")),
             )
         finished_at = payload.get("finished_at")
+        strategy_label = _strategy_label_zh(payload.get("strategy_label"))
+        engine_type = payload.get("engine_type", "signal")
+        exit_mode = payload.get("exit_mode")
         item = {
             "run_id": payload.get("run_id"),
             "strategy_key": payload.get("strategy_key"),
-            "strategy_label": payload.get("strategy_label"),
-            "engine_type": payload.get("engine_type", "signal"),
+            "strategy_label": strategy_label,
+            "engine_type": engine_type,
+            "display_engine_type": _engine_type_label(engine_type),
             "timeframe": payload.get("timeframe"),
-            "exit_mode": payload.get("exit_mode"),
+            "exit_mode": exit_mode,
+            "display_exit_mode": _exit_mode_label(exit_mode),
             "exchange": payload.get("exchange"),
             "finished_at": _format_timestamp(finished_at),
             "_finished_at_ts": _safe_timestamp(finished_at),
@@ -201,10 +244,12 @@ def load_active_leaderboard(root: Path | None = None) -> list[dict[str, Any]]:
                 "rank": _safe_int(item.get("rank")) or index,
                 "stability": item.get("stability") or "unknown",
                 "strategy_key": item.get("strategy_key"),
-                "strategy_label": item.get("strategy_label") or item.get("strategy_key") or "未命名策略",
+                "strategy_label": _strategy_label_zh(item.get("strategy_label") or item.get("strategy_key")),
                 "timeframe": item.get("timeframe"),
                 "exit_mode": item.get("exit_mode"),
+                "display_exit_mode": _exit_mode_label(item.get("exit_mode")),
                 "engine_type": item.get("engine_type"),
+                "display_engine_type": _engine_type_label(item.get("engine_type")),
                 "run_id": run_id,
                 "annualized_return_pct": _safe_float(item.get("annualized_return_pct")),
                 "total_return_pct": _safe_float(item.get("total_return_pct")),
@@ -260,10 +305,12 @@ def build_strategy_compare_context(strategy_key: str, root: Path | None = None) 
             {
                 "timeframe": timeframe,
                 "exit_mode": exit_mode,
+                "display_exit_mode": _exit_mode_label(exit_mode),
                 "run_count": int(len(group)),
                 "latest_finished_at": chosen.get("finished_at"),
                 "latest_run_id": chosen.get("run_id"),
                 "latest_engine_type": chosen.get("engine_type"),
+                "latest_display_engine_type": chosen.get("display_engine_type") or _engine_type_label(chosen.get("engine_type")),
                 "latest_total_return_pct": chosen.get("total_return_pct"),
                 "latest_annualized_return_pct": chosen.get("annualized_return_pct"),
                 "latest_max_drawdown_pct": chosen.get("max_drawdown_pct"),
@@ -277,7 +324,7 @@ def build_strategy_compare_context(strategy_key: str, root: Path | None = None) 
     return {
         "page_title": "策略比较",
         "strategy_key": strategy_key,
-        "strategy_label": runs[0].get("strategy_label") or strategy_key,
+        "strategy_label": _strategy_label_zh(runs[0].get("strategy_label") or strategy_key),
         "matrix_rows": rows,
         "runs": runs,
         "has_runs": True,
@@ -298,6 +345,7 @@ def build_run_detail_context(run_id: str, root: Path | None = None) -> dict[str,
                 f"&run_id={quote_plus(str(run_id))}"
                 f"&trade_id={quote_plus(str(row.get('trade_id') or row.get('signal_id') or ''))}"
             )
+            row["display_status"] = _trade_status_label(row.get("status"))
             trade_rows.append(row)
     equity_rows = []
     if not equity_curve.empty:
@@ -305,7 +353,7 @@ def build_run_detail_context(run_id: str, root: Path | None = None) -> dict[str,
         if not chart_frame.empty:
             chart_frame["timestamp"] = pd.to_datetime(chart_frame["timestamp"], errors="coerce", utc=True)
             chart_frame["equity"] = pd.to_numeric(chart_frame["equity"], errors="coerce")
-            chart_frame = chart_frame.dropna().tail(600)
+            chart_frame = chart_frame.dropna().sort_values("timestamp").reset_index(drop=True)
             equity_rows = [
                 {"time": int(item["timestamp"].timestamp()), "value": round(float(item["equity"]), 4)}
                 for item in chart_frame.to_dict(orient="records")

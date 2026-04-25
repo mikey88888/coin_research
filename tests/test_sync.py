@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import pandas as pd
 
+from coin_research.config import ExchangeConfig
 from coin_research.sync import (
     SYNC_POLICIES,
     compute_sync_end,
@@ -13,6 +14,7 @@ from coin_research.sync import (
     fetch_market_cap_page,
     resolve_top_market_cap_universe,
     sync_symbol_timeframe,
+    sync_top_market_cap_ohlcv,
 )
 
 
@@ -40,6 +42,36 @@ class SyncTests(unittest.TestCase):
                 markets_frame=pd.DataFrame(),
                 max_candidate_pages=0,
             )
+
+    def test_resolve_top_market_cap_universe_rejects_blank_quote(self) -> None:
+        with self.assertRaisesRegex(ValueError, "quote must be a non-empty asset code"):
+            resolve_top_market_cap_universe(
+                exchange_name="binance",
+                markets_frame=pd.DataFrame(),
+                quote="   ",
+            )
+
+    def test_resolve_top_market_cap_universe_trims_quote_whitespace(self) -> None:
+        markets = pd.DataFrame(
+            [
+                {"symbol": "BTC/USDT", "base": "BTC", "quote": "USDT", "type": "spot", "spot": True, "swap": False, "future": False, "active": True},
+            ]
+        )
+        with patch(
+            "coin_research.sync.fetch_market_cap_page",
+            return_value=pd.DataFrame(
+                [
+                    {"id": "bitcoin", "symbol": "btc", "name": "Bitcoin", "market_cap_rank": 1, "market_cap": 1},
+                ]
+            ),
+        ):
+            universe = resolve_top_market_cap_universe(
+                exchange_name="binance",
+                markets_frame=markets,
+                top_n=1,
+                quote=" usdt ",
+            )
+        self.assertEqual(universe["market_symbol"].tolist(), ["BTC/USDT"])
 
     def test_resolve_top_market_cap_universe_uses_spot_usdt_markets(self) -> None:
         markets = pd.DataFrame(
@@ -93,6 +125,14 @@ class SyncTests(unittest.TestCase):
                 policy=policy,
                 now=datetime(2026, 4, 6, 10, 31, tzinfo=UTC),
                 batch_limit=0,
+            )
+
+    def test_sync_top_market_cap_ohlcv_requires_positive_symbols_limit(self) -> None:
+        with self.assertRaisesRegex(ValueError, "symbols_limit must be a positive integer"):
+            sync_top_market_cap_ohlcv(
+                conn=object(),
+                config=ExchangeConfig(exchange="binance"),
+                symbols_limit=0,
             )
 
     def test_sync_symbol_timeframe_paginates_and_filters_open_bar(self) -> None:

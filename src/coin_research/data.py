@@ -24,6 +24,12 @@ def _validate_since(since: int | None) -> int | None:
     return since
 
 
+def _validate_symbol(symbol: str) -> str:
+    if not symbol or not symbol.strip():
+        raise ValueError("symbol must not be blank")
+    return symbol
+
+
 def _validate_timeframe(timeframe: str) -> str:
     timeframe_to_milliseconds(timeframe)
     return timeframe
@@ -74,6 +80,7 @@ def fetch_ohlcv_frame_from_exchange(
     limit: int = 500,
     since: int | None = None,
 ) -> pd.DataFrame:
+    symbol = _validate_symbol(symbol)
     timeframe = _validate_timeframe(timeframe)
     limit = _validate_positive_limit(limit)
     since = _validate_since(since)

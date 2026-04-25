@@ -17,6 +17,15 @@ def _as_bool(value: str | None, default: bool) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def _normalize_exchange_name(value: str | None, *, default: str, env_name: str) -> str:
+    if value is None:
+        return default
+    normalized = value.strip().lower()
+    if not normalized:
+        raise ValueError(f"{env_name} must not be blank")
+    return normalized
+
+
 def _as_positive_int(value: str | None, *, default: int, env_name: str) -> int:
     if value is None:
         return default
@@ -50,7 +59,11 @@ def load_project_env() -> bool:
 def load_settings() -> ExchangeConfig:
     load_project_env()
     return ExchangeConfig(
-        exchange=os.getenv("COIN_RESEARCH_EXCHANGE", "binance"),
+        exchange=_normalize_exchange_name(
+            os.getenv("COIN_RESEARCH_EXCHANGE"),
+            default="binance",
+            env_name="COIN_RESEARCH_EXCHANGE",
+        ),
         api_key=os.getenv("COIN_RESEARCH_API_KEY") or None,
         api_secret=os.getenv("COIN_RESEARCH_API_SECRET") or None,
         enable_rate_limit=_as_bool(os.getenv("COIN_RESEARCH_ENABLE_RATE_LIMIT"), True),

@@ -3,7 +3,7 @@
 <section class="hero-card">
   <div>
     <p class="eyebrow">市场总览</p>
-    <h1>Binance Top 100 研究面板</h1>
+    <h1>Binance 前 100 币种研究面板</h1>
     <p class="lede">这里集中展示币种数据覆盖情况、活跃前 10 策略榜单、最新回测和策略比较入口。</p>
     <div class="hero-links">
       <a class="action-link" href="/research/leaderboard">看前 10 榜单</a>
@@ -46,7 +46,7 @@
           <td>{{ row.rank | format_int }}</td>
           <td>{{ row.strategy_label }}</td>
           <td><span class="pill">{{ row.timeframe }}</span></td>
-          <td>{{ row.exit_mode }}</td>
+          <td>{{ row.display_exit_mode }}</td>
           <td>{{ row.return_drawdown_ratio | format_number(4) }}</td>
           <td>{{ row.annualized_return_pct | format_pct }}</td>
           <td>{{ row.max_drawdown_pct | format_pct }}</td>

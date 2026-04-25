@@ -128,6 +128,12 @@ def _to_timestamp(value: Any) -> pd.Timestamp:
     return pd.Timestamp(value)
 
 
+def _validate_account_config(config: AccountConfig) -> AccountConfig:
+    if config.quantity_step <= 0:
+        raise ValueError(f"quantity_step must be > 0, got {config.quantity_step}")
+    return config
+
+
 def _round_quantity(value: float, *, step: float) -> float:
     if value <= 0 or step <= 0:
         return 0.0
@@ -278,6 +284,7 @@ def run_account_backtest(
     time_column: str,
     config: AccountConfig,
 ) -> AccountBacktestResult:
+    config = _validate_account_config(config)
     normalized_signals = _normalize_signals(signals)
     signals_by_time = _group_signals_by_entry_time(normalized_signals)
     frame_map, timeline = _normalize_market_frames(market_frames, time_column=time_column)

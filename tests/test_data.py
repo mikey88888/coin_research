@@ -16,6 +16,19 @@ class DataTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "timeframe value must be > 0"):
             timeframe_to_milliseconds("0m")
 
+    def test_fetch_ohlcv_frame_rejects_blank_symbol(self) -> None:
+        class FakeExchange:
+            def fetch_ohlcv(self, symbol: str, timeframe: str, since=None, limit: int = 500):
+                raise AssertionError("fetch_ohlcv should not be called for blank symbol")
+
+        with self.assertRaisesRegex(ValueError, "symbol must not be blank"):
+            fetch_ohlcv_frame_from_exchange(
+                exchange=FakeExchange(),
+                exchange_name="binance",
+                symbol="   ",
+                timeframe="1h",
+            )
+
     def test_fetch_ohlcv_frame_rejects_invalid_timeframe(self) -> None:
         class FakeExchange:
             def fetch_ohlcv(self, symbol: str, timeframe: str, since=None, limit: int = 500):

@@ -1,13 +1,32 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 import pandas as pd
 
+from coin_research.backtest_donchian_breakout import _parse_symbols_arg, run_backtest
 from coin_research.strategies.donchian_breakout import run_donchian_breakout_backtest
 
 
 class DonchianBreakoutTests(unittest.TestCase):
+    def test_parse_symbols_arg_rejects_duplicate_symbols_case_insensitive(self) -> None:
+        with self.assertRaisesRegex(ValueError, r"symbols must not contain duplicates: \['BTC/USDT'\]"):
+            _parse_symbols_arg("BTC/USDT, btc/usdt")
+
+    def test_run_backtest_rejects_blank_symbol_entries_before_db_lookup(self) -> None:
+        with patch("coin_research.backtest_donchian_breakout.load_tracked_symbols") as mocked_load:
+            with self.assertRaisesRegex(ValueError, "symbols must not contain blank entries"):
+                run_backtest(
+                    exchange_name="binance",
+                    engine="signal",
+                    timeframe="4h",
+                    breakout_window=20,
+                    exit_window=10,
+                    symbols=["BTC/USDT", "   "],
+                )
+        mocked_load.assert_not_called()
+
     def test_rejects_invalid_windows(self) -> None:
         frame = pd.DataFrame(
             {

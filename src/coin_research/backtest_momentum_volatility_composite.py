@@ -10,46 +10,43 @@ import pandas as pd
 from .backtests.account import AccountConfig, run_account_backtest
 from .config import project_root
 from .db import load_ohlcv, load_tracked_symbols
-from .strategies.donchian_breakout import (
-    DEFAULT_BREAKOUT_WINDOW,
-    DEFAULT_EXIT_WINDOW,
-    run_donchian_breakout_backtest,
+from .strategies.momentum_volatility_composite import (
+    DEFAULT_HOLD_BARS,
+    DEFAULT_LOOKBACK_BARS,
+    DEFAULT_MIN_VOLATILITY_PCT,
+    DEFAULT_REBALANCE_INTERVAL,
+    DEFAULT_TOP_K,
+    DEFAULT_VOLATILITY_WINDOW,
+    run_momentum_volatility_composite_backtest,
     summarize_trade_results,
 )
 
 
-STRATEGY_KEY = "donchian-breakout"
-TIMEFRAME_CHOICES = {"1d": "bar_time", "4h": "bar_time", "30m": "bar_time", "5m": "bar_time"}
+STRATEGY_KEY = "momentum-volatility-composite"
+TIMEFRAME_CHOICES = {"1d": "bar_time", "4h": "bar_time", "30m": "bar_time"}
 ENGINE_CHOICES = {"account", "signal"}
 
 
-def _normalize_requested_symbols(symbols: list[str]) -> list[str]:
-    normalized: list[str] = []
-    duplicates: list[str] = []
-    seen: set[str] = set()
-    for raw_symbol in symbols:
-        symbol = raw_symbol.strip().upper()
-        if not symbol:
-            raise ValueError("symbols must not contain blank entries")
-        if symbol in seen and symbol not in duplicates:
-            duplicates.append(symbol)
-        seen.add(symbol)
-        normalized.append(symbol)
-    if duplicates:
-        raise ValueError(f"symbols must not contain duplicates: {duplicates}")
-    return normalized
+def _decimal_slug(value: float) -> str:
+    text = f"{value:.4f}".rstrip("0").rstrip(".")
+    return text.replace("-", "m").replace(".", "p")
 
 
-def _parse_symbols_arg(value: str | None) -> list[str] | None:
-    if not value:
-        return None
-    items = [part.strip().upper() for part in value.split(",") if part.strip()]
-    return _normalize_requested_symbols(items) if items else None
-
-
-def _run_id(*, timeframe: str, breakout_window: int, exit_window: int) -> str:
+def _run_id(
+    *,
+    timeframe: str,
+    lookback_bars: int,
+    volatility_window: int,
+    top_k: int,
+    hold_bars: int,
+    rebalance_interval: int,
+    min_volatility_pct: float,
+) -> str:
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    return f"{timestamp}__{timeframe}__bw{breakout_window}_ew{exit_window}"
+    return (
+        f"{timestamp}__{timeframe}__lb{lookback_bars}_vw{volatility_window}_top{top_k}"
+        f"_h{hold_bars}_rb{rebalance_interval}_mv{_decimal_slug(min_volatility_pct)}"
+    )
 
 
 def _run_dir(root: Path, *, run_id: str) -> Path:
@@ -80,8 +77,13 @@ def run_backtest(
     exchange_name: str,
     engine: str,
     timeframe: str,
-    breakout_window: int,
-    exit_window: int,
+    lookback_bars: int,
+    volatility_window: int,
+    hold_bars: int,
+    top_k: int,
+    rebalance_interval: int,
+    min_universe_size: int | None = None,
+    min_volatility_pct: float = DEFAULT_MIN_VOLATILITY_PCT,
     symbols: list[str] | None = None,
     initial_capital: float = 100000.0,
     position_target_pct: float = 0.2,
@@ -98,42 +100,55 @@ def run_backtest(
     if timeframe not in TIMEFRAME_CHOICES:
         raise ValueError(f"unsupported timeframe: {timeframe}")
 
-    requested_symbols = None if symbols is None else _normalize_requested_symbols(symbols)
     available_symbols = load_tracked_symbols(exchange_name=exchange_name, timeframe=timeframe, dsn=dsn)
     available_symbol_set = set(available_symbols)
-    target_symbols = available_symbols if requested_symbols is None else [symbol for symbol in requested_symbols if symbol in available_symbol_set]
-    missing_symbols = [] if requested_symbols is None else sorted(set(requested_symbols) - set(target_symbols))
+    target_symbols = available_symbols if symbols is None else [symbol for symbol in symbols if symbol in available_symbol_set]
+    missing_symbols = [] if symbols is None else sorted(set(symbols) - set(target_symbols))
     if missing_symbols:
         raise ValueError(f"symbols not found in synced crypto universe: {missing_symbols}")
 
-    run_id = _run_id(timeframe=timeframe, breakout_window=breakout_window, exit_window=exit_window)
+    run_id = _run_id(
+        timeframe=timeframe,
+        lookback_bars=lookback_bars,
+        volatility_window=volatility_window,
+        top_k=top_k,
+        hold_bars=hold_bars,
+        rebalance_interval=rebalance_interval,
+        min_volatility_pct=min_volatility_pct,
+    )
     root_dir = root or project_root()
     run_dir = _run_dir(root_dir, run_id=run_id)
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    trades = []
     market_frames: dict[str, pd.DataFrame] = {}
     for symbol in target_symbols:
         frame = _load_frame_for_timeframe(symbol, exchange_name=exchange_name, timeframe=timeframe, dsn=dsn)
         if frame.empty:
             continue
-        result = run_donchian_breakout_backtest(
-            frame,
-            symbol=symbol,
-            breakout_window=breakout_window,
-            exit_window=exit_window,
-            time_column=TIMEFRAME_CHOICES[timeframe],
-            enforce_non_overlapping=(engine == "signal"),
-        )
-        trades.extend(result.trades)
-        if engine == "account":
-            market_frames[symbol] = frame.loc[:, [TIMEFRAME_CHOICES[timeframe], "open", "close"]].copy()
+        market_frames[symbol] = frame
+
+    result = run_momentum_volatility_composite_backtest(
+        market_frames,
+        lookback_bars=lookback_bars,
+        volatility_window=volatility_window,
+        hold_bars=hold_bars,
+        top_k=top_k,
+        rebalance_interval=rebalance_interval,
+        min_universe_size=min_universe_size,
+        min_volatility_pct=min_volatility_pct,
+        time_column=TIMEFRAME_CHOICES[timeframe],
+        enforce_non_overlapping=True,
+    )
+    trades = result.trades
 
     if engine == "account":
         account_result = run_account_backtest(
             run_id=run_id,
             signals=trades,
-            market_frames=market_frames,
+            market_frames={
+                symbol: frame.loc[:, [TIMEFRAME_CHOICES[timeframe], "open", "close"]].copy()
+                for symbol, frame in market_frames.items()
+            },
             time_column=TIMEFRAME_CHOICES[timeframe],
             config=AccountConfig(
                 initial_capital=initial_capital,
@@ -156,6 +171,12 @@ def run_backtest(
         equity_curve_frame = pd.DataFrame([point.to_record() for point in account_result.equity_curve])
         summary = dict(account_result.summary)
         summary["return_drawdown_ratio"] = _return_drawdown_ratio(summary)
+        summary["lookback_bars"] = lookback_bars
+        summary["volatility_window"] = volatility_window
+        summary["min_volatility_pct"] = min_volatility_pct
+        summary["rebalance_interval"] = rebalance_interval
+        summary["top_k"] = top_k
+        summary["universe_symbols"] = len(market_frames)
     else:
         trade_frame = pd.DataFrame([trade.to_record() for trade in trades])
         if trade_frame.empty:
@@ -164,7 +185,15 @@ def run_backtest(
             trade_frame = trade_frame.sort_values(["entry_date", "symbol"]).reset_index(drop=True)
         orders_frame = pd.DataFrame()
         equity_curve_frame = pd.DataFrame()
-        summary = summarize_trade_results(trades, universe_symbols=len(target_symbols))
+        summary = summarize_trade_results(
+            trades,
+            universe_symbols=len(market_frames),
+            rebalance_interval=rebalance_interval,
+            top_k=top_k,
+            volatility_window=volatility_window,
+        )
+        summary["lookback_bars"] = lookback_bars
+        summary["min_volatility_pct"] = min_volatility_pct
 
     trades_path = run_dir / "trades.csv"
     summary_path = run_dir / "summary.json"
@@ -182,13 +211,18 @@ def run_backtest(
     meta = {
         "run_id": run_id,
         "strategy_key": STRATEGY_KEY,
-        "strategy_label": "Donchian Breakout",
+        "strategy_label": "Momentum + Volatility Composite",
         "engine_type": engine,
         "timeframe": timeframe,
         "exchange": exchange_name,
         "params": {
-            "breakout_window": breakout_window,
-            "exit_window": exit_window,
+            "lookback_bars": lookback_bars,
+            "volatility_window": volatility_window,
+            "hold_bars": hold_bars,
+            "top_k": top_k,
+            "rebalance_interval": rebalance_interval,
+            "min_universe_size": min_universe_size,
+            "min_volatility_pct": min_volatility_pct,
             "quantity_step": quantity_step if engine == "account" else None,
         },
         "universe": "market_data.crypto_ohlcv",
@@ -214,13 +248,18 @@ def run_backtest(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Backtest a Donchian breakout prototype on crypto data")
+    parser = argparse.ArgumentParser(description="Backtest a minimal momentum + volatility composite prototype on crypto data")
     parser.add_argument("--exchange", default="binance")
     parser.add_argument("--symbols", help="Comma separated market symbols, for example BTC/USDT,ETH/USDT")
     parser.add_argument("--engine", choices=sorted(ENGINE_CHOICES), default="account")
-    parser.add_argument("--timeframe", choices=sorted(TIMEFRAME_CHOICES), default="4h")
-    parser.add_argument("--breakout-window", type=int, default=DEFAULT_BREAKOUT_WINDOW)
-    parser.add_argument("--exit-window", type=int, default=DEFAULT_EXIT_WINDOW)
+    parser.add_argument("--timeframe", choices=sorted(TIMEFRAME_CHOICES), default="1d")
+    parser.add_argument("--lookback-bars", type=int, default=DEFAULT_LOOKBACK_BARS)
+    parser.add_argument("--volatility-window", type=int, default=DEFAULT_VOLATILITY_WINDOW)
+    parser.add_argument("--hold-bars", type=int, default=DEFAULT_HOLD_BARS)
+    parser.add_argument("--top-k", type=int, default=DEFAULT_TOP_K)
+    parser.add_argument("--rebalance-interval", type=int, default=DEFAULT_REBALANCE_INTERVAL)
+    parser.add_argument("--min-universe-size", type=int)
+    parser.add_argument("--min-volatility-pct", type=float, default=DEFAULT_MIN_VOLATILITY_PCT)
     parser.add_argument("--initial-capital", type=float, default=100000.0)
     parser.add_argument("--position-target-pct", type=float, default=0.2)
     parser.add_argument("--max-positions", type=int, default=5)
@@ -230,13 +269,18 @@ def main() -> None:
     parser.add_argument("--quantity-step", type=float, default=0.0001)
     args = parser.parse_args()
 
-    symbols = _parse_symbols_arg(args.symbols)
+    symbols = [part.strip().upper() for part in args.symbols.split(",") if part.strip()] if args.symbols else None
     trade_frame, summary, run_dir, _ = run_backtest(
         exchange_name=args.exchange,
         engine=args.engine,
         timeframe=args.timeframe,
-        breakout_window=args.breakout_window,
-        exit_window=args.exit_window,
+        lookback_bars=args.lookback_bars,
+        volatility_window=args.volatility_window,
+        hold_bars=args.hold_bars,
+        top_k=args.top_k,
+        rebalance_interval=args.rebalance_interval,
+        min_universe_size=args.min_universe_size,
+        min_volatility_pct=args.min_volatility_pct,
         symbols=symbols,
         initial_capital=args.initial_capital,
         position_target_pct=args.position_target_pct,

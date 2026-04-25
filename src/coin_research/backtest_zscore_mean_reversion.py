@@ -10,46 +10,37 @@ import pandas as pd
 from .backtests.account import AccountConfig, run_account_backtest
 from .config import project_root
 from .db import load_ohlcv, load_tracked_symbols
-from .strategies.donchian_breakout import (
-    DEFAULT_BREAKOUT_WINDOW,
-    DEFAULT_EXIT_WINDOW,
-    run_donchian_breakout_backtest,
+from .strategies.zscore_mean_reversion import (
+    DEFAULT_ENTRY_Z,
+    DEFAULT_EXIT_Z,
+    DEFAULT_LOOKBACK,
+    DEFAULT_MAX_HOLD_BARS,
+    run_zscore_mean_reversion_backtest,
     summarize_trade_results,
 )
 
 
-STRATEGY_KEY = "donchian-breakout"
-TIMEFRAME_CHOICES = {"1d": "bar_time", "4h": "bar_time", "30m": "bar_time", "5m": "bar_time"}
+STRATEGY_KEY = "zscore-mean-reversion"
+TIMEFRAME_CHOICES = {"1d": "bar_time", "4h": "bar_time", "30m": "bar_time"}
 ENGINE_CHOICES = {"account", "signal"}
-
-
-def _normalize_requested_symbols(symbols: list[str]) -> list[str]:
-    normalized: list[str] = []
-    duplicates: list[str] = []
-    seen: set[str] = set()
-    for raw_symbol in symbols:
-        symbol = raw_symbol.strip().upper()
-        if not symbol:
-            raise ValueError("symbols must not contain blank entries")
-        if symbol in seen and symbol not in duplicates:
-            duplicates.append(symbol)
-        seen.add(symbol)
-        normalized.append(symbol)
-    if duplicates:
-        raise ValueError(f"symbols must not contain duplicates: {duplicates}")
-    return normalized
+EXIT_MODE = "mean_reversion_time_stop"
 
 
 def _parse_symbols_arg(value: str | None) -> list[str] | None:
     if not value:
         return None
     items = [part.strip().upper() for part in value.split(",") if part.strip()]
-    return _normalize_requested_symbols(items) if items else None
+    return items or None
 
 
-def _run_id(*, timeframe: str, breakout_window: int, exit_window: int) -> str:
+def _slug_float(value: float) -> str:
+    text = f"{value:.2f}".rstrip("0").rstrip(".")
+    return text.replace("-", "m").replace(".", "p")
+
+
+def _run_id(*, timeframe: str, lookback: int, entry_z: float, exit_z: float, max_hold_bars: int) -> str:
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    return f"{timestamp}__{timeframe}__bw{breakout_window}_ew{exit_window}"
+    return f"{timestamp}__{timeframe}__lb{lookback}_ez{_slug_float(entry_z)}_xz{_slug_float(exit_z)}_h{max_hold_bars}"
 
 
 def _run_dir(root: Path, *, run_id: str) -> Path:
@@ -80,8 +71,10 @@ def run_backtest(
     exchange_name: str,
     engine: str,
     timeframe: str,
-    breakout_window: int,
-    exit_window: int,
+    lookback: int,
+    entry_z: float,
+    exit_z: float,
+    max_hold_bars: int,
     symbols: list[str] | None = None,
     initial_capital: float = 100000.0,
     position_target_pct: float = 0.2,
@@ -98,15 +91,14 @@ def run_backtest(
     if timeframe not in TIMEFRAME_CHOICES:
         raise ValueError(f"unsupported timeframe: {timeframe}")
 
-    requested_symbols = None if symbols is None else _normalize_requested_symbols(symbols)
     available_symbols = load_tracked_symbols(exchange_name=exchange_name, timeframe=timeframe, dsn=dsn)
     available_symbol_set = set(available_symbols)
-    target_symbols = available_symbols if requested_symbols is None else [symbol for symbol in requested_symbols if symbol in available_symbol_set]
-    missing_symbols = [] if requested_symbols is None else sorted(set(requested_symbols) - set(target_symbols))
+    target_symbols = available_symbols if symbols is None else [symbol for symbol in symbols if symbol in available_symbol_set]
+    missing_symbols = [] if symbols is None else sorted(set(symbols) - set(target_symbols))
     if missing_symbols:
         raise ValueError(f"symbols not found in synced crypto universe: {missing_symbols}")
 
-    run_id = _run_id(timeframe=timeframe, breakout_window=breakout_window, exit_window=exit_window)
+    run_id = _run_id(timeframe=timeframe, lookback=lookback, entry_z=entry_z, exit_z=exit_z, max_hold_bars=max_hold_bars)
     root_dir = root or project_root()
     run_dir = _run_dir(root_dir, run_id=run_id)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -117,11 +109,13 @@ def run_backtest(
         frame = _load_frame_for_timeframe(symbol, exchange_name=exchange_name, timeframe=timeframe, dsn=dsn)
         if frame.empty:
             continue
-        result = run_donchian_breakout_backtest(
+        result = run_zscore_mean_reversion_backtest(
             frame,
             symbol=symbol,
-            breakout_window=breakout_window,
-            exit_window=exit_window,
+            lookback=lookback,
+            entry_z=entry_z,
+            exit_z=exit_z,
+            max_hold_bars=max_hold_bars,
             time_column=TIMEFRAME_CHOICES[timeframe],
             enforce_non_overlapping=(engine == "signal"),
         )
@@ -179,16 +173,20 @@ def run_backtest(
         orders_path = None
         equity_curve_path = None
 
+    now = datetime.now().isoformat(timespec="seconds")
     meta = {
         "run_id": run_id,
         "strategy_key": STRATEGY_KEY,
-        "strategy_label": "Donchian Breakout",
+        "strategy_label": "Z-score Mean Reversion",
         "engine_type": engine,
         "timeframe": timeframe,
+        "exit_mode": EXIT_MODE,
         "exchange": exchange_name,
         "params": {
-            "breakout_window": breakout_window,
-            "exit_window": exit_window,
+            "lookback": lookback,
+            "entry_z": entry_z,
+            "exit_z": exit_z,
+            "max_hold_bars": max_hold_bars,
             "quantity_step": quantity_step if engine == "account" else None,
         },
         "universe": "market_data.crypto_ohlcv",
@@ -200,8 +198,8 @@ def run_backtest(
         "fee_rate": fee_rate if engine == "account" else None,
         "slippage_per_unit": slippage_per_unit if engine == "account" else None,
         "quantity_step": quantity_step if engine == "account" else None,
-        "started_at": datetime.now().isoformat(timespec="seconds"),
-        "finished_at": datetime.now().isoformat(timespec="seconds"),
+        "started_at": now,
+        "finished_at": now,
         "summary_path": str(summary_path),
         "trades_path": str(trades_path),
         "orders_path": str(orders_path) if orders_path else None,
@@ -214,13 +212,15 @@ def run_backtest(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Backtest a Donchian breakout prototype on crypto data")
+    parser = argparse.ArgumentParser(description="Backtest a minimal z-score mean reversion prototype on crypto data")
     parser.add_argument("--exchange", default="binance")
     parser.add_argument("--symbols", help="Comma separated market symbols, for example BTC/USDT,ETH/USDT")
     parser.add_argument("--engine", choices=sorted(ENGINE_CHOICES), default="account")
     parser.add_argument("--timeframe", choices=sorted(TIMEFRAME_CHOICES), default="4h")
-    parser.add_argument("--breakout-window", type=int, default=DEFAULT_BREAKOUT_WINDOW)
-    parser.add_argument("--exit-window", type=int, default=DEFAULT_EXIT_WINDOW)
+    parser.add_argument("--lookback", type=int, default=DEFAULT_LOOKBACK)
+    parser.add_argument("--entry-z", type=float, default=DEFAULT_ENTRY_Z)
+    parser.add_argument("--exit-z", type=float, default=DEFAULT_EXIT_Z)
+    parser.add_argument("--max-hold-bars", type=int, default=DEFAULT_MAX_HOLD_BARS)
     parser.add_argument("--initial-capital", type=float, default=100000.0)
     parser.add_argument("--position-target-pct", type=float, default=0.2)
     parser.add_argument("--max-positions", type=int, default=5)
@@ -235,8 +235,10 @@ def main() -> None:
         exchange_name=args.exchange,
         engine=args.engine,
         timeframe=args.timeframe,
-        breakout_window=args.breakout_window,
-        exit_window=args.exit_window,
+        lookback=args.lookback,
+        entry_z=args.entry_z,
+        exit_z=args.exit_z,
+        max_hold_bars=args.max_hold_bars,
         symbols=symbols,
         initial_capital=args.initial_capital,
         position_target_pct=args.position_target_pct,
