@@ -46,6 +46,15 @@ def _normalize_quote_arg(raw: str | None) -> str | None:
     return normalized
 
 
+def _normalize_symbol_arg(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    normalized = raw.strip()
+    if not normalized:
+        raise ValueError("--symbol must not be blank")
+    return normalized
+
+
 def _build_config(args: argparse.Namespace) -> ExchangeConfig:
     base = load_settings()
     exchange = _normalize_exchange_override(getattr(args, "exchange", None)) or base.exchange
@@ -96,6 +105,7 @@ def main() -> None:
     try:
         config = _build_config(args)
         normalized_quote = _normalize_quote_arg(getattr(args, "quote", None))
+        normalized_symbol = _normalize_symbol_arg(getattr(args, "symbol", None))
     except ValueError as exc:
         parser.error(str(exc))
 
@@ -116,7 +126,7 @@ def main() -> None:
     if args.command == "ohlcv":
         frame = fetch_ohlcv_frame(
             exchange_name=config.exchange,
-            symbol=args.symbol,
+            symbol=normalized_symbol if normalized_symbol is not None else args.symbol,
             timeframe=args.timeframe,
             limit=args.limit,
             since=args.since,

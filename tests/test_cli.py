@@ -44,6 +44,16 @@ class CliValidationTests(unittest.TestCase):
         self.assertIn("argument --since: must be a non-negative integer, got -1", stderr)
         self.assertNotIn("Traceback", stderr)
 
+    def test_ohlcv_rejects_blank_symbol_cleanly(self) -> None:
+        with patch(
+            "coin_research.cli.load_settings",
+            return_value=ExchangeConfig(exchange="binance", api_key=None, api_secret=None, enable_rate_limit=True, timeout_ms=10000),
+        ):
+            code, stderr = self._run_main("ohlcv", "--symbol", "   ")
+        self.assertEqual(code, 2)
+        self.assertIn("--symbol must not be blank", stderr)
+        self.assertNotIn("Traceback", stderr)
+
     def test_sync_top_requires_positive_top_value(self) -> None:
         code, stderr = self._run_main("sync-top", "--top", "0")
         self.assertEqual(code, 2)
@@ -94,6 +104,21 @@ class CliValidationTests(unittest.TestCase):
         self.assertIn("BTC/USDT", stdout)
         self.assertNotIn("ETH/BTC", stdout)
         self.assertEqual(stderr, "")
+
+    def test_ohlcv_normalizes_symbol_before_fetch(self) -> None:
+        frame = pd.DataFrame(
+            [
+                {"open_time": "2024-01-01T00:00:00Z", "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1.0}
+            ]
+        )
+        with patch(
+            "coin_research.cli.load_settings",
+            return_value=ExchangeConfig(exchange="binance", api_key=None, api_secret=None, enable_rate_limit=True, timeout_ms=10000),
+        ), patch("coin_research.cli.fetch_ohlcv_frame", return_value=frame) as mocked_fetch:
+            stdout, stderr = self._run_main_stdout("ohlcv", "--symbol", " BTC/USDT ")
+        self.assertIn("rows=1", stdout)
+        self.assertEqual(stderr, "")
+        self.assertEqual(mocked_fetch.call_args.kwargs["symbol"], "BTC/USDT")
 
     def test_cli_rejects_blank_quote_cleanly(self) -> None:
         with patch(
