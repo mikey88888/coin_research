@@ -88,6 +88,40 @@
       "source_summary": "reports/backtests/five-wave-reversal/20260406-215322__5m__three_wave_exit/summary.json"
     },
     {
+      "strategy_key": "liquidity-screened-absolute-momentum-composite",
+      "strategy_label": "Liquidity-Screened Absolute Momentum Gated Composite",
+      "timeframe": "1d",
+      "exit_mode": "rebalance_exit",
+      "engine_type": "account",
+      "run_id": "20260426-154900__1d__lb60_vw60_lw20_top5_h5_rb5_mv0p5_am5_lr0p9",
+      "annualized_return_pct": 48.4402,
+      "total_return_pct": 2993.1183,
+      "max_drawdown_pct": 57.5085,
+      "closed_trades": 1179,
+      "win_rate": 47.4131,
+      "return_drawdown_ratio": 0.8423,
+      "source_summary": "reports/backtests/liquidity-screened-absolute-momentum-composite/20260426-154900__1d__lb60_vw60_lw20_top5_h5_rb5_mv0p5_am5_lr0p9/summary.json",
+      "stability": "stable",
+      "rank": 5
+    },
+    {
+      "strategy_key": "breadth-regime-gated-composite",
+      "strategy_label": "Breadth Regime Gated Composite",
+      "timeframe": "1d",
+      "exit_mode": "rebalance_exit",
+      "engine_type": "account",
+      "run_id": "20260426-135011__1d__lb60_vw60_top5_h5_rb5_mv0p5_am5_bf0_br0p4",
+      "annualized_return_pct": 40.7029,
+      "total_return_pct": 1842.7693,
+      "max_drawdown_pct": 49.0827,
+      "closed_trades": 796,
+      "win_rate": 46.2312,
+      "return_drawdown_ratio": 0.8293,
+      "source_summary": "reports/backtests/breadth-regime-gated-composite/20260426-135011__1d__lb60_vw60_top5_h5_rb5_mv0p5_am5_bf0_br0p4/summary.json",
+      "stability": "stable",
+      "rank": 6
+    },
+    {
       "strategy_key": "momentum-volatility-composite",
       "strategy_label": "Momentum + Volatility Composite",
       "timeframe": "1d",
@@ -102,7 +136,7 @@
       "return_drawdown_ratio": 0.7528,
       "source_summary": "reports/backtests/momentum-volatility-composite/20260413-204337__1d__lb60_vw60_top5_h5_rb5_mv0p5/summary.json",
       "stability": "stable",
-      "rank": 5
+      "rank": 7
     },
     {
       "strategy_key": "cross-sectional-relative-strength",
@@ -119,7 +153,7 @@
       "return_drawdown_ratio": 0.5007,
       "source_summary": "reports/backtests/cross-sectional-relative-strength/20260413-184155__1d__lb60_top5_h10_rb10/summary.json",
       "stability": "stable",
-      "rank": 6
+      "rank": 8
     },
     {
       "strategy_key": "ema-trend-following",
@@ -136,7 +170,7 @@
       "return_drawdown_ratio": 0.4612,
       "source_summary": "reports/backtests/ema-trend-following/20260413-123611__4h__fw20_sw50_sl5/summary.json",
       "stability": "stable",
-      "rank": 7
+      "rank": 9
     },
     {
       "strategy_key": "volatility-compression-breakout",
@@ -153,41 +187,7 @@
       "return_drawdown_ratio": 0.2498,
       "source_summary": "reports/backtests/volatility-compression-breakout/20260413-164501__4h__sw20_bw55_ew20_sq0p2_h30/summary.json",
       "stability": "stable",
-      "rank": 8
-    },
-    {
-      "strategy_key": "donchian-breakout",
-      "strategy_label": "Donchian Breakout",
-      "timeframe": "4h",
-      "exit_mode": "channel_exit",
-      "engine_type": "account",
-      "run_id": "20260413-103446__4h__bw20_ew10",
-      "annualized_return_pct": 20.9934,
-      "total_return_pct": 418.3973,
-      "max_drawdown_pct": 94.1958,
-      "closed_trades": 2455,
-      "win_rate": 32.3422,
-      "return_drawdown_ratio": 0.2229,
-      "source_summary": "reports/backtests/donchian-breakout/20260413-103446__4h__bw20_ew10/summary.json",
-      "stability": "stable",
-      "rank": 9
-    },
-    {
-      "rank": 10,
-      "stability": "stable",
-      "strategy_key": "five-wave-reversal",
-      "strategy_label": "五浪加速下跌反转",
-      "timeframe": "4h",
-      "exit_mode": "three_wave_exit",
-      "engine_type": "account",
-      "run_id": "20260406-201638__4h__three_wave_exit",
-      "annualized_return_pct": 9.318,
-      "total_return_pct": 115.8283,
-      "max_drawdown_pct": 43.9158,
-      "closed_trades": 226,
-      "win_rate": 57.0796,
-      "return_drawdown_ratio": 0.2122,
-      "source_summary": "reports/backtests/five-wave-reversal/20260406-201638__4h__three_wave_exit/summary.json"
+      "rank": 10
     }
   ]
 }

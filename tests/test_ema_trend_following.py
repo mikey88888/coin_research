@@ -1,13 +1,45 @@
 from __future__ import annotations
 
+import argparse
+from contextlib import redirect_stderr
+import io
+import sys
 import unittest
+from unittest.mock import patch
 
 import pandas as pd
 
+from coin_research.backtest_ema_trend_following import _parse_symbols_arg, main
 from coin_research.strategies.ema_trend_following import run_ema_trend_following_backtest
 
 
 class EmaTrendFollowingTests(unittest.TestCase):
+    def _run_main(self, *argv: str) -> tuple[int, str]:
+        stderr = io.StringIO()
+        with patch.object(sys, "argv", ["coin-research-backtest-ema", *argv]), redirect_stderr(stderr):
+            with self.assertRaises(SystemExit) as exc:
+                main()
+        return exc.exception.code, stderr.getvalue()
+
+    def test_parse_symbols_arg_normalizes_symbols(self) -> None:
+        self.assertEqual(_parse_symbols_arg(" btc/usdt , eth/usdt "), ["BTC/USDT", "ETH/USDT"])
+
+    def test_parse_symbols_arg_rejects_blank_only_value(self) -> None:
+        with self.assertRaisesRegex(argparse.ArgumentTypeError, "must contain at least one non-blank symbol"):
+            _parse_symbols_arg("   ")
+
+    def test_main_rejects_non_positive_fast_window_cleanly(self) -> None:
+        code, stderr = self._run_main("--fast-window", "0")
+        self.assertEqual(code, 2)
+        self.assertIn("argument --fast-window: must be a positive integer, got 0", stderr)
+        self.assertNotIn("Traceback", stderr)
+
+    def test_main_rejects_slow_window_not_greater_than_fast_window_cleanly(self) -> None:
+        code, stderr = self._run_main("--fast-window", "20", "--slow-window", "20")
+        self.assertEqual(code, 2)
+        self.assertIn("--slow-window must be greater than --fast-window", stderr)
+        self.assertNotIn("Traceback", stderr)
+
     def test_rejects_invalid_windows(self) -> None:
         frame = pd.DataFrame(
             {

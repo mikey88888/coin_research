@@ -238,9 +238,49 @@ uv run --no-sync python -m coin_research.web.app --host 0.0.0.0 --port 8001
 - `/markets`
 - `/markets/crypto`
 - `/markets/crypto/{symbol}`
+- `/paper`
 - `/research/runs`
 - `/research/runs/{run_id}`
 - `/research/strategies/five-wave-reversal`
+
+## 真实行情模拟盘
+
+当前已提供一个 **Binance Spot USDT** 的网页控制模拟盘入口：
+
+- 页面：`/paper`
+- 运行形态：网页发起，后台子进程 runner 执行
+- 策略：`Absolute Momentum Gated Composite`
+- 默认周期：`30m`
+
+它使用 **真实公网 K 线** 驱动策略与模拟成交，但 **不会调用币安私有下单 API**。
+
+使用前请先确保 PostgreSQL 可用并已初始化 schema：
+
+```bash
+./scripts/start_local_postgres.sh
+export COIN_RESEARCH_PG_DSN="postgresql://thinkpad@127.0.0.1:5432/coin_research"
+uv run coin-research db-init
+```
+
+如果 `/paper/start` 提示 Binance 连接失败，先运行诊断命令。它会分别检查 WSL 直连、当前 `HTTP(S)_PROXY`、WSL gateway 代理和 ccxt `exchangeInfo`：
+
+```bash
+uv run --no-sync coin-research diagnose-binance
+```
+
+然后启动 Web：
+
+```bash
+uv run --no-sync python -m coin_research.web.app --host 0.0.0.0 --port 8001
+```
+
+打开 `/paper` 后即可：
+
+- 启动一条模拟盘 session
+- 查看当前持仓
+- 查看最近订单
+- 查看净值曲线
+- 请求停止当前 session
 
 ## 测试与基础验证
 

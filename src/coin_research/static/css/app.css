@@ -242,18 +242,41 @@ h2 {
   gap: 12px;
 }
 
+.stack-form {
+  display: grid;
+  gap: 14px;
+}
+
+.stack-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+}
+
 .search-form input,
-.search-form button {
+.search-form button,
+.stack-form input,
+.stack-form select,
+.primary-button,
+.secondary-button {
   border-radius: 999px;
   border: 1px solid var(--line);
   padding: 10px 14px;
   font: inherit;
 }
 
-.search-form button {
+.search-form button,
+.primary-button {
   background: var(--accent);
   color: white;
   border-color: var(--accent);
+  cursor: pointer;
+}
+
+.secondary-button {
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
 }
 
 .timeframe-links {

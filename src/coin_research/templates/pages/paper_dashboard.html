@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block content %}
+<meta http-equiv="refresh" content="15" />
+
+<section class="hero-card">
+  <div>
+    <p class="eyebrow">Binance Spot Paper</p>
+    <h1>真实行情模拟盘</h1>
+    <p class="lede">V1 只做 Binance 现货 USDT 模拟盘，使用真实 K 线，策略固定为 Absolute Momentum Gated Composite。</p>
+  </div>
+  <div class="hero-meta">
+    <div class="stat-card">
+      <span>默认周期</span>
+      <strong>{{ default_timeframe }}</strong>
+    </div>
+    <div class="stat-card">
+      <span>默认池大小</span>
+      <strong>{{ default_top_n | format_int }}</strong>
+    </div>
+    <div class="stat-card">
+      <span>刷新周期</span>
+      <strong>15s</strong>
+    </div>
+  </div>
+</section>
+
+{% if paper_error %}
+<section class="status-banner error">
+  <div>
+    <p class="eyebrow">运行状态</p>
+    <h2>模拟盘页面不可用</h2>
+    <p class="lede">{{ paper_error }}</p>
+  </div>
+</section>
+{% else %}
+
+{% if action_error %}
+<section class="status-banner error">
+  <div>
+    <p class="eyebrow">操作失败</p>
+    <h2>这次请求没有执行成功</h2>
+    <p class="lede">{{ action_error }}</p>
+  </div>
+</section>
+{% endif %}
+
+{% if connectivity_report %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Connectivity Preflight</p>
+      <h2>Binance 连接诊断</h2>
+    </div>
+  </div>
+  <p class="lede">{{ connectivity_report.summary }}</p>
+  <p class="subtle">建议：{{ connectivity_report.recommendation }}</p>
+  <p class="subtle">本地复现命令：<code>{{ connectivity_command }}</code></p>
+  {% if connectivity_report.proxy_env %}
+  <p class="subtle">
+    代理环境：
+    {% for item in connectivity_report.proxy_env %}
+      <code>{{ item.key }}={{ item.value }}</code>
+    {% endfor %}
+  </p>
+  {% else %}
+  <p class="subtle">代理环境：未设置 HTTP(S)_PROXY</p>
+  {% endif %}
+  {% if connectivity_report.wsl_gateway %}
+  <p class="subtle">WSL gateway：<code>{{ connectivity_report.wsl_gateway }}</code></p>
+  {% endif %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>探针</th><th>结果</th><th>耗时</th><th>目标</th><th>细节</th></tr>
+      </thead>
+      <tbody>
+        {% for probe in connectivity_report.probes %}
+        <tr>
+          <td>{{ probe.name }}</td>
+          <td>{{ "ok" if probe.ok else "fail" }}</td>
+          <td>{{ probe.elapsed_ms }}ms</td>
+          <td><code>{{ probe.target }}</code></td>
+          <td>{{ probe.detail or probe.error or "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">控制</p>
+      <h2>启动 / 停止</h2>
+    </div>
+  </div>
+  <div class="section-grid">
+    <form class="stack-form" method="post" action="/paper/start">
+      <label>
+        <span>周期</span>
+        <select name="timeframe">
+          {% for item in timeframe_choices %}
+            <option value="{{ item }}" {% if item == default_timeframe %}selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Universe Top N</span>
+        <input type="number" name="top_n" min="1" value="{{ default_top_n }}" />
+      </label>
+      <label>
+        <span>初始资金</span>
+        <input type="number" name="initial_capital" min="1" step="1" value="{{ default_initial_capital }}" />
+      </label>
+      <button class="primary-button" type="submit">启动模拟盘</button>
+    </form>
+    <form class="stack-form" method="post" action="/paper/stop">
+      <p class="subtle">如果当前存在活跃 session，这里会写入 stop request，runner 会在安全点退出。</p>
+      <button class="secondary-button" type="submit">停止当前 session</button>
+    </form>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Session</p>
+      <h2>{{ session.session_id if session else "暂无 session" }}</h2>
+    </div>
+  </div>
+  {% if session %}
+  <div class="metric-row">
+    <div class="stat-card"><span>状态</span><strong>{{ session.status }}</strong></div>
+    <div class="stat-card"><span>心跳</span><strong>{{ session.heartbeat_at_label or "n/a" }}</strong></div>
+    <div class="stat-card"><span>最新净值</span><strong>{{ session.latest_equity | format_number(2) }}</strong></div>
+    <div class="stat-card"><span>当前回撤</span><strong>{{ session.latest_drawdown_pct | format_pct }}</strong></div>
+    <div class="stat-card"><span>下一信号栏</span><strong>{{ session.next_signal_bar_label or "n/a" }}</strong></div>
+    <div class="stat-card"><span>Stale</span><strong>{{ "yes" if session.is_stale else "no" }}</strong></div>
+  </div>
+  {% if session.last_error %}
+  <p class="subtle">最后错误：{{ session.last_error }}</p>
+  {% endif %}
+  {% if session.log_path %}
+  <p class="subtle">日志文件：{{ session.log_path }}</p>
+  {% endif %}
+  {% endif %}
+</section>
+
+{% if equity_rows %}
+<section class="panel">
+  <h2>净值曲线</h2>
+  <div id="equity-chart" class="chart" data-line='{{ equity_rows | tojson }}'></div>
+</section>
+{% endif %}
+
+<section class="section-grid">
+  <article class="panel">
+    <h2>当前持仓</h2>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>币种</th><th>数量</th><th>入场价</th><th>入场时间</th><th>计划离场</th></tr>
+        </thead>
+        <tbody>
+          {% for row in positions %}
+          <tr>
+            <td>{{ row.symbol }}</td>
+            <td>{{ row.quantity | format_number(6) }}</td>
+            <td>{{ row.entry_price | format_number(6) }}</td>
+            <td>{{ row.entry_time | format_ts }}</td>
+            <td>{{ row.planned_exit_time | format_ts }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="panel">
+    <h2>最近事件</h2>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>时间</th><th>级别</th><th>消息</th></tr>
+        </thead>
+        <tbody>
+          {% for row in events %}
+          <tr>
+            <td>{{ row.created_at | format_ts }}</td>
+            <td>{{ row.level }}</td>
+            <td>{{ row.message }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<section class="panel">
+  <h2>最近订单</h2>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>时间</th><th>币种</th><th>方向</th><th>价格</th><th>数量</th><th>手续费</th><th>原因</th></tr>
+      </thead>
+      <tbody>
+        {% for row in orders %}
+        <tr>
+          <td>{{ row.timestamp | format_ts }}</td>
+          <td>{{ row.symbol }}</td>
+          <td>{{ row.side }}</td>
+          <td>{{ row.price | format_number(6) }}</td>
+          <td>{{ row.quantity | format_number(6) }}</td>
+          <td>{{ row.fee | format_number(6) }}</td>
+          <td>{{ row.reason }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

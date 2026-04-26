@@ -108,7 +108,25 @@
 - 最新实验：`20260426-033314__1d__lb60_vw60_top5_h5_rb5_mv0p5_am5` 已产出最小 account prototype（1d，lookback_bars=60，volatility_window=60，top_k=5，hold_bars=5，rebalance_interval=5，min_volatility_pct=0.5，min_momentum_pct=5.0）
 - 当前观察：这个 gate 明显优于未加 gate 的同源 best（Momentum + Volatility Composite `20260413-204337__1d__lb60_vw60_top5_h5_rb5_mv0p5`，return/drawdown `0.7528`）。当前最佳 am5 配置年化 `56.4906%`、最大回撤 `51.0655%`、return/drawdown `1.1062`、`1196` 笔 closed trades、total return `4674.3019%`；它不仅成为当前最强的非五浪结果，也超过 five-wave 30m trailing-stop 次优结果（`1.0916`）。额外补验的 `am7.5` 配置回落到 `0.8803`，说明 gate 有效，但阈值过高会开始牺牲组合广度。下一步优先考虑 turnover / liquidity 约束、权重方案与更明确的 regime gate，而不是继续裸刷阈值。
 
-### 13. Pullback Entry in Trend
+### 13. Breadth Regime Gate on Absolute Momentum Gated Composite
+- 类型：复合因子过滤
+- 数据需求：多币种 OHLCV
+- 状态：tested
+- 假设：对当前最强的非五浪方向（Absolute Momentum Gated Composite）叠加“市场广度足够健康才参与”的 regime gate，可减少大面积趋势衰竭阶段的回撤暴露。
+- 最小实现：沿用 `lb60/vw60/top5/h5/rb5/mv0.5/am5` 复合排序，只在过去 60 bars 内“收益 >= 0%”的币种占比达到阈值时才执行 rebalance。
+- 最新实验：`20260426-135011__1d__lb60_vw60_top5_h5_rb5_mv0p5_am5_bf0_br0p4` 已产出最小 account prototype（1d，breadth_floor=0%，min_breadth_ratio=40%）
+- 当前观察：breadth gate 的确压低了回撤：最佳首轮配置 `bf0/br0.4` 年化 `40.7029%`、最大回撤 `49.0827%`、return/drawdown `0.8293`、`796` 笔 closed trades、`100` 个币种参与；相较 ungated 的 Absolute Momentum Gated Composite best（`1.1062`）明显退化，但仍强于未加 absolute momentum gate 的 Momentum + Volatility Composite（`0.7528`）与 Cross-sectional Relative Strength（`0.5007`）。结论是：简单 breadth regime gate 可以稳定压回撤，但当前实现削弱了收益弹性，暂时更像“稳健化分支”而不是新的主力 alpha。下一步若继续，应优先试更平滑的 regime 定义（EW universe trend / breadth EMA / drawdown-aware exposure scaling），而不是继续硬阈值裸刷。
+
+### 14. Liquidity-Screened Absolute Momentum Gated Composite
+- 类型：复合因子过滤
+- 数据需求：多币种 OHLCV
+- 状态：tested
+- 假设：在当前最强的非五浪方向（Absolute Momentum Gated Composite）上加一个基于 rolling dollar volume 的流动性筛选，可能通过剔除成交稀薄的小币种来减少回撤与手续费敏感性。
+- 最小实现：沿用 `lb60/vw60/top5/h5/rb5/mv0.5/am5` 复合排序，只允许进入过去 `liquidity_window` 内 rolling median dollar volume 位于全市场前 `liquidity_universe_ratio` 的币种。
+- 最新实验：`20260426-154900__1d__lb60_vw60_lw20_top5_h5_rb5_mv0p5_am5_lr0p9` 已产出最小 account prototype（1d，liquidity_window=20，liquidity_universe_ratio=90%）
+- 当前观察：这个方向首轮被基本证伪。实现 sanity check 显示 `lr1.0` 可以近似复现父策略 best（`20260426-154839__..._lr1`，return/drawdown `1.1077`，与父策略 `1.1062` 基本一致），说明脚手架本身没有明显跑偏；但一旦真正开始做流动性收缩，表现就单调退化。当前“真正 screened”里的最佳结果是 `lw20/lr0.9`：年化 `48.4402%`、最大回撤 `57.5085%`、return/drawdown `0.8423`、`1179` 笔 closed trades、avg liquidity-eligible universe `43.3499`。继续收紧后退化更明显：`lr0.5` 已掉到 `0.1760`，`lr0.6`/`lr0.7`/`lr0.8` 也分别只有 `0.1495`~`0.6353`。结论是：这条 alpha 当前并不来自“只做最液体币”子集，硬流动性筛选会同时损伤收益并放大回撤；若后续继续，应优先试更软的做法（exposure scaling / 显式 slippage 模型 / liquidity-aware weighting），而不是继续硬砍 universe。
+
+### 15. Pullback Entry in Trend
 - 类型：趋势回撤入场
 - 数据需求：OHLCV
 - 假设：趋势中的回撤买点比追突破有更好盈亏比

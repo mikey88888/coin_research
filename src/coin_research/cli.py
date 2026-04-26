@@ -5,6 +5,7 @@ import argparse
 from .config import ExchangeConfig, load_settings
 from .data import fetch_ohlcv_frame, list_markets, write_frame
 from .db import connect_pg, ensure_schema, upsert_markets, upsert_ohlcv
+from .live.connectivity import diagnose_binance_connectivity, format_connectivity_report
 from .sync import sync_top_market_cap_ohlcv
 
 
@@ -95,7 +96,16 @@ def main() -> None:
     sync_parser.add_argument("--top", type=_positive_int_arg, default=100, help="Number of market-cap assets to sync")
     sync_parser.add_argument("--symbols-limit", type=_positive_int_arg, default=None, help="Optional symbol limit for testing")
 
+    diagnose_parser = subparsers.add_parser("diagnose-binance", help="Diagnose WSL/proxy connectivity to Binance public REST")
+    diagnose_parser.add_argument("--timeout", type=float, default=5.0, help="Per-probe timeout in seconds")
+    diagnose_parser.add_argument("--skip-ccxt", action="store_true", help="Skip the final ccxt exchangeInfo probe")
+
     args = parser.parse_args()
+    if args.command == "diagnose-binance":
+        report = diagnose_binance_connectivity(timeout_seconds=args.timeout, include_ccxt=not args.skip_ccxt)
+        print(format_connectivity_report(report))
+        raise SystemExit(0 if report["ok"] else 2)
+
     if args.command == "db-init":
         with connect_pg(args.dsn) as conn:
             ensure_schema(conn)

@@ -11,5 +11,6 @@ src/*.egg-info/
 reports/*
 !reports/.gitkeep
 log/*.log
+log/paper_trading/
 !log/.gitkeep
 !log/README.md

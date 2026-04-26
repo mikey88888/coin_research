@@ -78,6 +78,110 @@ CREATE TABLE IF NOT EXISTS market_data.crypto_symbol_stats (
     latest_sync_at TIMESTAMPTZ,
     PRIMARY KEY (exchange, quote, symbol)
 );
+
+CREATE SCHEMA IF NOT EXISTS trading_runtime;
+
+CREATE TABLE IF NOT EXISTS trading_runtime.paper_sessions (
+    session_id TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    exchange TEXT NOT NULL,
+    quote TEXT NOT NULL,
+    timeframe TEXT NOT NULL,
+    strategy_key TEXT NOT NULL,
+    initial_capital NUMERIC(38, 18) NOT NULL,
+    cash NUMERIC(38, 18) NOT NULL,
+    peak_equity NUMERIC(38, 18) NOT NULL,
+    top_n INTEGER NOT NULL,
+    max_positions INTEGER NOT NULL,
+    position_target_pct NUMERIC(20, 10) NOT NULL,
+    max_gross_exposure_pct NUMERIC(20, 10) NOT NULL,
+    fee_rate NUMERIC(20, 10) NOT NULL,
+    quantity_step NUMERIC(38, 18) NOT NULL,
+    lookback_bars INTEGER NOT NULL,
+    volatility_window INTEGER NOT NULL,
+    hold_bars INTEGER NOT NULL,
+    top_k INTEGER NOT NULL,
+    rebalance_interval INTEGER NOT NULL,
+    min_volatility_pct NUMERIC(20, 10) NOT NULL,
+    min_momentum_pct NUMERIC(20, 10) NOT NULL,
+    universe_symbols JSONB,
+    pid INTEGER,
+    stop_requested BOOLEAN NOT NULL DEFAULT FALSE,
+    heartbeat_at TIMESTAMPTZ,
+    started_at TIMESTAMPTZ,
+    finished_at TIMESTAMPTZ,
+    last_signal_bar TIMESTAMPTZ,
+    next_signal_bar TIMESTAMPTZ,
+    last_error TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS paper_sessions_status_created_at_idx
+    ON trading_runtime.paper_sessions (status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS trading_runtime.paper_orders (
+    id BIGSERIAL PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES trading_runtime.paper_sessions(session_id) ON DELETE CASCADE,
+    signal_id TEXT NOT NULL DEFAULT '',
+    timestamp TIMESTAMPTZ NOT NULL,
+    symbol TEXT NOT NULL,
+    side TEXT NOT NULL,
+    price NUMERIC(38, 18) NOT NULL,
+    quantity NUMERIC(38, 18) NOT NULL,
+    turnover NUMERIC(38, 18) NOT NULL,
+    fee NUMERIC(38, 18) NOT NULL,
+    slippage NUMERIC(38, 18) NOT NULL DEFAULT 0,
+    reason TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (session_id, signal_id, timestamp, symbol, side, reason)
+);
+
+CREATE INDEX IF NOT EXISTS paper_orders_session_timestamp_idx
+    ON trading_runtime.paper_orders (session_id, timestamp DESC);
+
+CREATE TABLE IF NOT EXISTS trading_runtime.paper_positions (
+    session_id TEXT NOT NULL REFERENCES trading_runtime.paper_sessions(session_id) ON DELETE CASCADE,
+    symbol TEXT NOT NULL,
+    signal_id TEXT NOT NULL,
+    entry_time TIMESTAMPTZ NOT NULL,
+    planned_exit_time TIMESTAMPTZ NOT NULL,
+    quantity NUMERIC(38, 18) NOT NULL,
+    entry_price NUMERIC(38, 18) NOT NULL,
+    entry_fee NUMERIC(38, 18) NOT NULL,
+    entry_notional NUMERIC(38, 18) NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (session_id, symbol)
+);
+
+CREATE TABLE IF NOT EXISTS trading_runtime.paper_equity_curve (
+    id BIGSERIAL PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES trading_runtime.paper_sessions(session_id) ON DELETE CASCADE,
+    timestamp TIMESTAMPTZ NOT NULL,
+    cash NUMERIC(38, 18) NOT NULL,
+    market_value NUMERIC(38, 18) NOT NULL,
+    equity NUMERIC(38, 18) NOT NULL,
+    gross_exposure_pct NUMERIC(20, 10) NOT NULL,
+    drawdown_pct NUMERIC(20, 10) NOT NULL,
+    position_count INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (session_id, timestamp)
+);
+
+CREATE INDEX IF NOT EXISTS paper_equity_session_timestamp_idx
+    ON trading_runtime.paper_equity_curve (session_id, timestamp DESC);
+
+CREATE TABLE IF NOT EXISTS trading_runtime.paper_events (
+    id BIGSERIAL PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES trading_runtime.paper_sessions(session_id) ON DELETE CASCADE,
+    level TEXT NOT NULL,
+    message TEXT NOT NULL,
+    payload JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS paper_events_session_created_at_idx
+    ON trading_runtime.paper_events (session_id, created_at DESC);
 """
 
 

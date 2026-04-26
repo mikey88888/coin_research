@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from urllib.parse import parse_qs
+
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ...services.backtest_runs import build_leaderboard_context, build_run_detail_context, build_runs_index_context, build_strategy_compare_context
 from ...services.market_views import build_asset_detail_context, build_market_home_context, build_symbol_list_context
+from ...live.connectivity import BinanceConnectivityError
+from ...services.paper import build_paper_dashboard_context, start_paper_session, stop_paper_session
 from ..templating import TEMPLATES
 
 router = APIRouter()
@@ -62,3 +66,41 @@ def research_leaderboard(request: Request) -> HTMLResponse:
 @router.get("/research/strategies/{strategy_key}", response_class=HTMLResponse)
 def research_strategy_compare(request: Request, strategy_key: str) -> HTMLResponse:
     return _render(request, template_name="pages/research_strategy_compare.html", context=build_strategy_compare_context(strategy_key))
+
+
+@router.get("/paper", response_class=HTMLResponse)
+def paper_dashboard(request: Request) -> HTMLResponse:
+    return _render(request, template_name="pages/paper_dashboard.html", context=build_paper_dashboard_context())
+
+
+def _first_form_value(payload: dict[str, list[str]], key: str, *, default: str = "") -> str:
+    values = payload.get(key) or [default]
+    return values[0]
+
+
+@router.post("/paper/start", response_class=HTMLResponse)
+async def paper_start(request: Request):
+    try:
+        body = await request.body()
+        form = parse_qs(body.decode("utf-8"), keep_blank_values=True)
+        timeframe = _first_form_value(form, "timeframe", default="30m")
+        top_n = int(_first_form_value(form, "top_n", default="20"))
+        initial_capital = float(_first_form_value(form, "initial_capital", default="100000"))
+        start_paper_session(timeframe=timeframe, top_n=top_n, initial_capital=initial_capital)
+    except BinanceConnectivityError as exc:
+        context = build_paper_dashboard_context(action_error=str(exc), connectivity_report=exc.report)
+        return _render(request, template_name="pages/paper_dashboard.html", context=context)
+    except Exception as exc:
+        context = build_paper_dashboard_context(action_error=str(exc))
+        return _render(request, template_name="pages/paper_dashboard.html", context=context)
+    return RedirectResponse(url="/paper", status_code=303)
+
+
+@router.post("/paper/stop", response_class=HTMLResponse)
+async def paper_stop(request: Request):
+    try:
+        stop_paper_session()
+    except Exception as exc:
+        context = build_paper_dashboard_context(action_error=str(exc))
+        return _render(request, template_name="pages/paper_dashboard.html", context=context)
+    return RedirectResponse(url="/paper", status_code=303)

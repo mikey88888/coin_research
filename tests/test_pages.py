@@ -1,24 +1,34 @@
 from __future__ import annotations
 
+import asyncio
 import unittest
 from unittest.mock import patch
 
 import psycopg
 from starlette.requests import Request
 
+from coin_research.live.connectivity import BinanceConnectivityError
 from coin_research.web.app import create_app
-from coin_research.web.routes.pages import market_home
+from coin_research.web.routes.pages import market_home, paper_dashboard, paper_start, paper_stop
 
 
 class PagesRouteTests(unittest.TestCase):
-    def test_home_page_returns_200_when_market_database_is_unavailable(self) -> None:
+    def _request(self, *, method: str, path: str, body: bytes = b"") -> Request:
         app = create_app()
-        request = Request(
+        sent = {"done": False}
+
+        async def receive():
+            if sent["done"]:
+                return {"type": "http.request", "body": b"", "more_body": False}
+            sent["done"] = True
+            return {"type": "http.request", "body": body, "more_body": False}
+
+        return Request(
             {
                 "type": "http",
-                "method": "GET",
-                "path": "/",
-                "headers": [],
+                "method": method,
+                "path": path,
+                "headers": [(b"content-type", b"application/x-www-form-urlencoded")],
                 "query_string": b"",
                 "app": app,
                 "router": app.router,
@@ -27,8 +37,13 @@ class PagesRouteTests(unittest.TestCase):
                 "client": ("testclient", 5000),
                 "root_path": "",
                 "path_params": {},
-            }
+                "http_version": "1.1",
+            },
+            receive,
         )
+
+    def test_home_page_returns_200_when_market_database_is_unavailable(self) -> None:
+        request = self._request(method="GET", path="/")
         with patch(
             "coin_research.services.market_views.load_market_summary",
             side_effect=psycopg.OperationalError("connection failed"),
@@ -41,6 +56,78 @@ class PagesRouteTests(unittest.TestCase):
         body = response.body.decode("utf-8")
         self.assertIn("首页已降级显示", body)
         self.assertIn("市场数据暂不可用", body)
+
+    def test_paper_dashboard_renders_service_context(self) -> None:
+        request = self._request(method="GET", path="/paper")
+        with patch(
+            "coin_research.web.routes.pages.build_paper_dashboard_context",
+            return_value={
+                "page_title": "模拟盘控制台",
+                "session": None,
+                "positions": [],
+                "orders": [],
+                "equity_rows": [],
+                "events": [],
+                "timeframe_choices": ["30m"],
+                "default_timeframe": "30m",
+                "default_top_n": 20,
+                "default_initial_capital": 100000,
+                "paper_error": None,
+                "action_error": None,
+            },
+        ):
+            response = paper_dashboard(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("真实行情模拟盘", response.body.decode("utf-8"))
+
+    def test_paper_start_redirects_after_successful_launch(self) -> None:
+        request = self._request(
+            method="POST",
+            path="/paper/start",
+            body=b"timeframe=30m&top_n=20&initial_capital=100000",
+        )
+        with patch("coin_research.web.routes.pages.start_paper_session", return_value="paper-1"):
+            response = asyncio.run(paper_start(request))
+        self.assertEqual(response.status_code, 303)
+        self.assertEqual(response.headers["location"], "/paper")
+
+    def test_paper_start_renders_connectivity_report_on_preflight_failure(self) -> None:
+        request = self._request(
+            method="POST",
+            path="/paper/start",
+            body=b"timeframe=30m&top_n=20&initial_capital=100000",
+        )
+        report = {
+            "ok": False,
+            "summary": "Binance connectivity preflight failed: current HTTP(S)_PROXY is not usable from WSL.",
+            "recommendation": "fix proxy",
+            "proxy_env": [{"key": "HTTPS_PROXY", "value": "http://127.0.0.1:7897"}],
+            "wsl_gateway": "172.20.160.1",
+            "probes": [
+                {
+                    "name": "env_binance_ping",
+                    "target": "https://api.binance.com/api/v3/ping",
+                    "ok": False,
+                    "elapsed_ms": 100,
+                    "error": "timed out",
+                }
+            ],
+        }
+        with patch("coin_research.web.routes.pages.start_paper_session", side_effect=BinanceConnectivityError(report)):
+            response = asyncio.run(paper_start(request))
+
+        self.assertEqual(response.status_code, 200)
+        body = response.body.decode("utf-8")
+        self.assertIn("Binance 连接诊断", body)
+        self.assertIn("env_binance_ping", body)
+        self.assertIn("HTTPS_PROXY=http://127.0.0.1:7897", body)
+
+    def test_paper_stop_redirects_after_successful_request(self) -> None:
+        request = self._request(method="POST", path="/paper/stop", body=b"")
+        with patch("coin_research.web.routes.pages.stop_paper_session", return_value="paper-1"):
+            response = asyncio.run(paper_stop(request))
+        self.assertEqual(response.status_code, 303)
+        self.assertEqual(response.headers["location"], "/paper")
 
 
 if __name__ == "__main__":
