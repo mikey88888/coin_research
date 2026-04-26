@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
+import psycopg
 
 from ..data import timeframe_to_milliseconds
 from ..db import load_market_summary, load_ohlcv, load_symbol_cards
@@ -25,9 +26,30 @@ def _format_exit_marker_label(exit_reason: Any) -> str:
     return f"卖出 · {reason}"
 
 
+def _build_market_home_unavailable_context(*, exchange_name: str, quote: str, error: Exception) -> dict[str, Any]:
+    latest_runs = list_backtest_runs()[:8]
+    leaderboard_rows = load_active_leaderboard()[:10]
+    return {
+        "page_title": "量化研究总览",
+        "exchange_name": exchange_name,
+        "quote": quote,
+        "market_summary": {"tracked_symbols": 0, "total_rows": 0, "latest_sync_at": None, "timeframes": []},
+        "latest_sync_at": None,
+        "timeframe_rows": [],
+        "featured_symbols": [],
+        "latest_runs": latest_runs,
+        "leaderboard_rows": leaderboard_rows,
+        "market_data_error": "市场数据暂不可用。请先启动 PostgreSQL、初始化 schema，并同步一批基础行情数据。",
+        "market_data_error_detail": str(error).strip() or error.__class__.__name__,
+    }
+
+
 def build_market_home_context(*, exchange_name: str = "binance", quote: str = "USDT", dsn: str | None = None) -> dict[str, Any]:
-    summary = load_market_summary(exchange_name=exchange_name, quote=quote, dsn=dsn)
-    cards = load_symbol_cards(exchange_name=exchange_name, quote=quote, dsn=dsn)
+    try:
+        summary = load_market_summary(exchange_name=exchange_name, quote=quote, dsn=dsn)
+        cards = load_symbol_cards(exchange_name=exchange_name, quote=quote, dsn=dsn)
+    except (psycopg.Error, RuntimeError) as exc:
+        return _build_market_home_unavailable_context(exchange_name=exchange_name, quote=quote, error=exc)
     latest_runs = list_backtest_runs()[:8]
     leaderboard_rows = load_active_leaderboard()[:10]
     timeframe_rows = [

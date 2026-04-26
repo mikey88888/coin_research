@@ -27,6 +27,18 @@
   </div>
 </section>
 
+{% if market_data_error %}
+<section class="status-banner error">
+  <div>
+    <p class="eyebrow">数据状态</p>
+    <h2>首页已降级显示</h2>
+    <p class="lede">{{ market_data_error }}</p>
+    <p class="subtle">常用修复顺序：`./scripts/start_local_postgres.sh` → `uv run coin-research db-init` → `uv run coin-research sync-top --exchange binance --symbols-limit 5`</p>
+    <p class="subtle">底层错误：{{ market_data_error_detail }}</p>
+  </div>
+</section>
+{% endif %}
+
 <section class="panel">
   <div class="panel-header">
     <div>

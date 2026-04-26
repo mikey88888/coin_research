@@ -131,6 +131,19 @@ h2 {
   gap: 24px;
 }
 
+.status-banner {
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 16px 40px rgba(29, 26, 22, 0.06);
+}
+
+.status-banner.error {
+  background: linear-gradient(135deg, rgba(180, 83, 9, 0.14), rgba(255, 253, 248, 0.96));
+  border-color: rgba(180, 83, 9, 0.28);
+}
+
 .hero-links {
   display: flex;
   flex-wrap: wrap;

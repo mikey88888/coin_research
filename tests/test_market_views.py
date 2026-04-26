@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import patch
 
 import pandas as pd
+import psycopg
 
 from coin_research.services.market_views import build_asset_detail_context, build_market_home_context
 
@@ -60,6 +61,21 @@ class MarketViewsTests(unittest.TestCase):
         self.assertEqual(context["page_title"], "量化研究总览")
         self.assertEqual(context["leaderboard_rows"], leaderboard)
         self.assertEqual(context["featured_symbols"][0]["symbol"], "BTC/USDT")
+
+    def test_market_home_degrades_when_database_unavailable(self) -> None:
+        leaderboard = [{"rank": 1, "run_id": "run-1"}]
+        with patch(
+            "coin_research.services.market_views.load_market_summary",
+            side_effect=psycopg.OperationalError("connection failed"),
+        ), patch("coin_research.services.market_views.list_backtest_runs", return_value=[]), patch(
+            "coin_research.services.market_views.load_active_leaderboard", return_value=leaderboard
+        ):
+            context = build_market_home_context()
+
+        self.assertIn("市场数据暂不可用", context["market_data_error"])
+        self.assertEqual(context["market_summary"]["tracked_symbols"], 0)
+        self.assertEqual(context["leaderboard_rows"], leaderboard)
+        self.assertEqual(context["featured_symbols"], [])
 
     def test_asset_detail_handles_non_wave_trade_overlay(self) -> None:
         frame = pd.DataFrame(
