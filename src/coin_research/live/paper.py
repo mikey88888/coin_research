@@ -13,6 +13,7 @@ import pandas as pd
 from ..data import timeframe_to_milliseconds
 from ..config import project_root
 from ..sync import resolve_top_market_cap_universe
+from ..time_utils import beijing_now
 from ..strategies.absolute_momentum_volatility_composite import (
     DEFAULT_LOOKBACK_BARS,
     DEFAULT_VOLATILITY_WINDOW,
@@ -186,7 +187,7 @@ def build_default_config(*, timeframe: str = DEFAULT_TIMEFRAME, initial_capital:
 
 
 def generate_session_id() -> str:
-    timestamp = datetime.now(tz=UTC).strftime("%Y%m%d-%H%M%S")
+    timestamp = beijing_now().strftime("%Y%m%d-%H%M%S")
     return f"paper-{timestamp}-{uuid4().hex[:8]}"
 
 

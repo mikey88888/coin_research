@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from ...services.backtest_runs import build_leaderboard_context, build_run_detail_context, build_runs_index_context, build_strategy_compare_context
 from ...services.market_views import build_asset_detail_context, build_market_home_context, build_symbol_list_context
 from ...live.connectivity import BinanceConnectivityError
+from ...live.paper import DEFAULT_TIMEFRAME, TIMEFRAME_CHOICES
 from ...services.paper import build_paper_dashboard_context, start_paper_session, stop_paper_session
 from ..templating import TEMPLATES
 
@@ -100,12 +101,20 @@ def _positive_float_form_value(payload: dict[str, list[str]], key: str, *, defau
     return value
 
 
+def _choice_form_value(payload: dict[str, list[str]], key: str, *, default: str, choices: tuple[str, ...]) -> str:
+    raw = _first_form_value(payload, key, default=default).strip()
+    if raw not in choices:
+        allowed = ", ".join(choices)
+        raise ValueError(f"{key} must be one of [{allowed}], got {raw!r}")
+    return raw
+
+
 @router.post("/paper/start", response_class=HTMLResponse)
 async def paper_start(request: Request):
     try:
         body = await request.body()
         form = parse_qs(body.decode("utf-8"), keep_blank_values=True)
-        timeframe = _first_form_value(form, "timeframe", default="30m")
+        timeframe = _choice_form_value(form, "timeframe", default=DEFAULT_TIMEFRAME, choices=TIMEFRAME_CHOICES)
         top_n = _positive_int_form_value(form, "top_n", default="20")
         initial_capital = _positive_float_form_value(form, "initial_capital", default="100000")
         start_paper_session(timeframe=timeframe, top_n=top_n, initial_capital=initial_capital)

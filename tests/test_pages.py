@@ -122,6 +122,21 @@ class PagesRouteTests(unittest.TestCase):
         self.assertIn("env_binance_ping", body)
         self.assertIn("HTTPS_PROXY=http://127.0.0.1:7897", body)
 
+    def test_paper_start_rejects_invalid_timeframe_with_readable_error(self) -> None:
+        request = self._request(
+            method="POST",
+            path="/paper/start",
+            body=b"timeframe=5m&top_n=20&initial_capital=100000",
+        )
+        with patch("coin_research.web.routes.pages.start_paper_session") as mocked_start:
+            response = asyncio.run(paper_start(request))
+
+        self.assertEqual(response.status_code, 200)
+        body = response.body.decode("utf-8")
+        self.assertIn("timeframe must be one of [30m, 4h, 1d]", body)
+        self.assertIn("5m", body)
+        mocked_start.assert_not_called()
+
     def test_paper_start_rejects_non_positive_top_n_with_readable_error(self) -> None:
         request = self._request(
             method="POST",

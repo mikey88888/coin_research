@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
 import os
 import socket
 import subprocess
@@ -13,6 +12,7 @@ import requests
 
 from ..config import ExchangeConfig
 from ..exchanges import create_exchange
+from ..time_utils import beijing_now
 
 
 BINANCE_PING_URL = "https://api.binance.com/api/v3/ping"
@@ -287,7 +287,7 @@ def diagnose_binance_connectivity(
     ok, summary, recommendation = _summarize(probes, proxy_url=proxy_url)
     return {
         "ok": ok,
-        "generated_at": datetime.now(tz=UTC).isoformat(),
+        "generated_at": beijing_now().isoformat(),
         "exchange": exchange_name,
         "proxy_env": proxy_env_summary(),
         "wsl_gateway": gateway,

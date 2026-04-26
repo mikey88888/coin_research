@@ -183,7 +183,7 @@ uv run python scripts/seed_demo_market_data.py
 
 默认约定：
 
-- 时间统一存 `UTC`
+- 时间统一存 `UTC`；网页展示和模拟盘人工日志统一显示为北京时间
 - 使用 `ON CONFLICT DO UPDATE` 做幂等 upsert
 - `ccxt` 读取 shell 的代理环境变量，适配 WSL 代理场景
 

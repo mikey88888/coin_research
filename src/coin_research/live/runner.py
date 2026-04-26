@@ -11,6 +11,7 @@ from ..config import ExchangeConfig
 from ..data import fetch_ohlcv_frame_from_exchange, timeframe_to_milliseconds
 from ..db import connect_pg, ensure_schema
 from ..exchanges import create_exchange
+from ..time_utils import BEIJING_LABEL, BEIJING_TZ, format_beijing_ts
 from .paper import (
     PaperTradingConfig,
     apply_execution,
@@ -42,6 +43,14 @@ from .store import (
 DEFAULT_POLL_SECONDS = 15
 
 
+class BeijingLogFormatter(logging.Formatter):
+    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
+        timestamp = datetime.fromtimestamp(record.created, tz=BEIJING_TZ)
+        if datefmt:
+            return timestamp.strftime(datefmt)
+        return f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')} {BEIJING_LABEL}"
+
+
 def _positive_int_arg(value: str) -> int:
     try:
         parsed = int(value)
@@ -62,7 +71,7 @@ def _configure_logging(session_id: str) -> logging.Logger:
     if logger.handlers:
         return logger
 
-    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    formatter = BeijingLogFormatter("%(asctime)s %(levelname)s %(message)s")
     file_handler = logging.FileHandler(log_file, encoding="utf-8")
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -170,7 +179,7 @@ def run_session(*, session_id: str, poll_seconds: int = DEFAULT_POLL_SECONDS) ->
             if latest_signal_time is None or not market_frames:
                 logger.info(
                     "waiting for market data latest_signal_time=%s frames=%s",
-                    latest_signal_time.isoformat() if latest_signal_time is not None else "none",
+                    format_beijing_ts(latest_signal_time, seconds=True) if latest_signal_time is not None else "none",
                     len(market_frames),
                 )
                 time.sleep(poll_seconds)
@@ -190,7 +199,7 @@ def run_session(*, session_id: str, poll_seconds: int = DEFAULT_POLL_SECONDS) ->
                 execution_time = pd.Timestamp(next_signal_bar) + timeframe_step
                 open_prices = execution_prices_for_time(market_frames, execution_time=execution_time)
                 if not open_prices:
-                    logger.info("execution prices unavailable execution_time=%s", execution_time.isoformat())
+                    logger.info("execution prices unavailable execution_time=%s", format_beijing_ts(execution_time, seconds=True))
                     break
                 result = apply_execution(
                     execution_time=execution_time,
@@ -212,8 +221,8 @@ def run_session(*, session_id: str, poll_seconds: int = DEFAULT_POLL_SECONDS) ->
                 processed_any = True
                 logger.info(
                     "processed signal_bar=%s execution_time=%s signals=%s orders=%s positions=%s equity=%.4f",
-                    pd.Timestamp(next_signal_bar).isoformat(),
-                    execution_time.isoformat(),
+                    format_beijing_ts(next_signal_bar, seconds=True),
+                    format_beijing_ts(execution_time, seconds=True),
                     len(signals),
                     len(result.orders),
                     len(positions),
@@ -246,8 +255,8 @@ def run_session(*, session_id: str, poll_seconds: int = DEFAULT_POLL_SECONDS) ->
             if not processed_any:
                 logger.info(
                     "idle heartbeat latest_signal_time=%s next_signal_bar=%s",
-                    latest_signal_time.isoformat(),
-                    next_signal_bar.isoformat() if not pd.isna(next_signal_bar) else "none",
+                    format_beijing_ts(latest_signal_time, seconds=True),
+                    format_beijing_ts(next_signal_bar, seconds=True) if not pd.isna(next_signal_bar) else "none",
                 )
                 update_session_heartbeat(conn, session_id, pid=pid)
             time.sleep(poll_seconds)

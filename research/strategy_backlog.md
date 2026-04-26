@@ -126,7 +126,17 @@
 - 最新实验：`20260426-154900__1d__lb60_vw60_lw20_top5_h5_rb5_mv0p5_am5_lr0p9` 已产出最小 account prototype（1d，liquidity_window=20，liquidity_universe_ratio=90%）
 - 当前观察：这个方向首轮被基本证伪。实现 sanity check 显示 `lr1.0` 可以近似复现父策略 best（`20260426-154839__..._lr1`，return/drawdown `1.1077`，与父策略 `1.1062` 基本一致），说明脚手架本身没有明显跑偏；但一旦真正开始做流动性收缩，表现就单调退化。当前“真正 screened”里的最佳结果是 `lw20/lr0.9`：年化 `48.4402%`、最大回撤 `57.5085%`、return/drawdown `0.8423`、`1179` 笔 closed trades、avg liquidity-eligible universe `43.3499`。继续收紧后退化更明显：`lr0.5` 已掉到 `0.1760`，`lr0.6`/`lr0.7`/`lr0.8` 也分别只有 `0.1495`~`0.6353`。结论是：这条 alpha 当前并不来自“只做最液体币”子集，硬流动性筛选会同时损伤收益并放大回撤；若后续继续，应优先试更软的做法（exposure scaling / 显式 slippage 模型 / liquidity-aware weighting），而不是继续硬砍 universe。
 
-### 15. Pullback Entry in Trend
+### 15. Breadth-Scaled Absolute Momentum Composite
+- 类型：复合因子过滤 / soft regime scaling
+- 数据需求：多币种 OHLCV
+- 状态：tested
+- 假设：对当前最强非五浪方向（Absolute Momentum Gated Composite）来说，市场广度有信息量，但 hard gate 会过度牺牲收益；改成“按广度动态缩放持仓数量”的软处理，可能在保留大部分上涨弹性的同时显著压低回撤。
+- 最小实现：沿用 `lb60/vw60/top5/h5/rb5/mv0.5/am5` 复合排序，用过去 60 bars 内“收益 >= breadth_floor” 的币种占比作为 breadth proxy，并按 breadth ratio 线性缩放当期 `top_k`，而不是整次 rebalance 全跳过。
+- 最新实验：`20260426-175037__1d__lb60_vw60_top5_h5_rb5_mv0p5_am5_bf0_bsf0p15` 已产出最小 account prototype（1d，breadth_floor=0%，breadth_scale_floor_ratio=15%）
+- 当前观察：这个方向首轮结果比 hard gate 更强，也优于父策略。最佳配置 `bf0/bsf0.15` 年化 `47.4016%`、最大回撤 `35.8483%`、return/drawdown `1.3223`、`629` 笔 closed trades、avg exposure scale `36.7347%`；它明显优于 ungated Absolute Momentum Gated Composite best（`1.1062`）和 Breadth Regime Gated Composite best（`0.8293`），说明“广度有用，但应该做成连续缩放而不是一刀切 gate”。首轮邻域里 `bf0/bsf0.2` 也有 `1.1182`，而更高 floor（如 `bf2.5/bsf0.2=1.1765`）虽也强，但不如 `bf0/bsf0.15`。当前结论是：soft breadth scaling 是目前最有希望的非五浪稳健化分支之一。
+- 下一步优先：不要急着继续细抠单点阈值；优先验证更连续的实现（breadth EMA / explicit exposure weights / drawdown-aware scaling）以及加入 turnover/slippage 约束，确认优势不是单纯来自低曝光。
+
+### 16. Pullback Entry in Trend
 - 类型：趋势回撤入场
 - 数据需求：OHLCV
 - 假设：趋势中的回撤买点比追突破有更好盈亏比

@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from contextlib import redirect_stderr
 import io
+import logging
 import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
-from coin_research.live.runner import main, run_session
+from coin_research.live.runner import BeijingLogFormatter, main, run_session
 
 
 class PaperRunnerTests(unittest.TestCase):
@@ -22,6 +23,14 @@ class PaperRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "poll_seconds must be a positive integer, got 0"):
                 run_session(session_id="paper-1", poll_seconds=0)
         mocked_logging.assert_not_called()
+
+    def test_beijing_log_formatter_uses_readable_beijing_time(self) -> None:
+        record = logging.LogRecord("paper", logging.INFO, __file__, 1, "message", (), None)
+        record.created = 1_777_193_107.0
+
+        output = BeijingLogFormatter("%(asctime)s %(message)s").format(record)
+
+        self.assertIn("北京时间 message", output)
 
     def test_run_session_marks_failed_when_universe_bootstrap_raises(self) -> None:
         fake_conn = MagicMock()
