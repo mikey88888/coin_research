@@ -99,7 +99,16 @@
 - 最新实验：`20260413-204337__1d__lb60_vw60_top5_h5_rb5_mv0p5` 已产出最小 account prototype（1d，lookback_bars=60，volatility_window=60，top_k=5，hold_bars=5，rebalance_interval=5，min_volatility_pct=0.5）
 - 当前观察：这个方向对参数比较敏感，默认 `lb60/vw20/top5/h10/rb10` 很弱（return/drawdown `0.1175`），但把波动率窗口拉长到 `60` 且把轮动节奏加快到 `5 bars` 后，年化 `45.0105%`、最大回撤 `59.7927%`、return/drawdown `0.7528`、`1690` 笔 closed trades、`100` 个币种参与。它显著强于纯 Cross-sectional Relative Strength 当前 best（`0.5007`）、EMA 4h（`0.4612`）、Volatility Compression 4h（`0.2498`）和 Donchian 4h（`0.2229`），但仍落后于 30m five-wave 两个头部结果（`3.6473` / `1.0916`）。说明“动量 + 低波动惩罚”的横截面复合排序是当前候选池里更值得继续扩的方向。下一步优先考虑 absolute momentum gate、换手/手续费约束和权重方案，而不是回去默认继续微调五浪。
 
-### 12. Pullback Entry in Trend
+### 12. Absolute Momentum Gate on Momentum + Volatility Composite
+- 类型：复合因子过滤
+- 数据需求：OHLCV
+- 状态：tested
+- 假设：在横截面“动量 ÷ 波动率”排序前，先要求自身绝对动量为正，可减少趋势衰竭与噪声反弹带来的误选
+- 最小实现：Momentum + Volatility Composite 排序 + absolute momentum threshold gate + 固定周期轮动退出
+- 最新实验：`20260426-033314__1d__lb60_vw60_top5_h5_rb5_mv0p5_am5` 已产出最小 account prototype（1d，lookback_bars=60，volatility_window=60，top_k=5，hold_bars=5，rebalance_interval=5，min_volatility_pct=0.5，min_momentum_pct=5.0）
+- 当前观察：这个 gate 明显优于未加 gate 的同源 best（Momentum + Volatility Composite `20260413-204337__1d__lb60_vw60_top5_h5_rb5_mv0p5`，return/drawdown `0.7528`）。当前最佳 am5 配置年化 `56.4906%`、最大回撤 `51.0655%`、return/drawdown `1.1062`、`1196` 笔 closed trades、total return `4674.3019%`；它不仅成为当前最强的非五浪结果，也超过 five-wave 30m trailing-stop 次优结果（`1.0916`）。额外补验的 `am7.5` 配置回落到 `0.8803`，说明 gate 有效，但阈值过高会开始牺牲组合广度。下一步优先考虑 turnover / liquidity 约束、权重方案与更明确的 regime gate，而不是继续裸刷阈值。
+
+### 13. Pullback Entry in Trend
 - 类型：趋势回撤入场
 - 数据需求：OHLCV
 - 假设：趋势中的回撤买点比追突破有更好盈亏比
