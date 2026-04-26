@@ -11,6 +11,7 @@ from ..config import project_root
 from ..db import connect_pg, ensure_schema
 from ..live.connectivity import BinanceConnectivityError, diagnose_binance_connectivity
 from ..live.paper import DEFAULT_TOP_N, DEFAULT_TIMEFRAME, PaperTradingConfig, TIMEFRAME_CHOICES, is_session_stale, paper_log_path
+from ..time_utils import beijing_now_label, format_beijing_ts
 from ..live.store import (
     add_event,
     create_session,
@@ -27,10 +28,7 @@ from ..live.store import (
 
 
 def _format_ts(value: Any) -> str | None:
-    timestamp = pd.to_datetime(value, errors="coerce", utc=True)
-    if pd.isna(timestamp):
-        return str(value) if value not in (None, "") else None
-    return timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
+    return format_beijing_ts(value, seconds=True)
 
 
 def _binance_connectivity_preflight(*, config: PaperTradingConfig) -> None:
@@ -136,7 +134,7 @@ def start_paper_session(*, timeframe: str, top_n: int, initial_capital: float) -
     log_path = paper_log_path(session_id)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     launch_line = (
-        f"{datetime.now(tz=UTC).isoformat()} INFO launching paper runner"
+        f"{beijing_now_label()} INFO launching paper runner"
         f" session_id={session_id} timeframe={timeframe} top_n={top_n} initial_capital={initial_capital}\n"
     )
     log_path.write_text(launch_line, encoding="utf-8")
@@ -155,7 +153,7 @@ def start_paper_session(*, timeframe: str, top_n: int, initial_capital: float) -
             add_event(conn, session_id, level="error", message="paper runner spawn failed", payload={"error": str(exc)})
             mark_session_failed(conn, session_id, message=f"spawn failed: {exc}")
         with log_path.open("a", encoding="utf-8") as handle:
-            handle.write(f"{datetime.now(tz=UTC).isoformat()} ERROR spawn failed error={exc}\n")
+            handle.write(f"{beijing_now_label()} ERROR spawn failed error={exc}\n")
         raise
     return session_id
 

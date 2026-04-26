@@ -122,6 +122,32 @@ class PagesRouteTests(unittest.TestCase):
         self.assertIn("env_binance_ping", body)
         self.assertIn("HTTPS_PROXY=http://127.0.0.1:7897", body)
 
+    def test_paper_start_rejects_non_positive_top_n_with_readable_error(self) -> None:
+        request = self._request(
+            method="POST",
+            path="/paper/start",
+            body=b"timeframe=30m&top_n=0&initial_capital=100000",
+        )
+        with patch("coin_research.web.routes.pages.start_paper_session") as mocked_start:
+            response = asyncio.run(paper_start(request))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("top_n must be a positive integer, got 0", response.body.decode("utf-8"))
+        mocked_start.assert_not_called()
+
+    def test_paper_start_rejects_non_positive_initial_capital_with_readable_error(self) -> None:
+        request = self._request(
+            method="POST",
+            path="/paper/start",
+            body=b"timeframe=30m&top_n=20&initial_capital=0",
+        )
+        with patch("coin_research.web.routes.pages.start_paper_session") as mocked_start:
+            response = asyncio.run(paper_start(request))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("initial_capital must be a positive number, got 0.0", response.body.decode("utf-8"))
+        mocked_start.assert_not_called()
+
     def test_paper_stop_redirects_after_successful_request(self) -> None:
         request = self._request(method="POST", path="/paper/stop", body=b"")
         with patch("coin_research.web.routes.pages.stop_paper_session", return_value="paper-1"):

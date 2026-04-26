@@ -78,14 +78,36 @@ def _first_form_value(payload: dict[str, list[str]], key: str, *, default: str =
     return values[0]
 
 
+def _positive_int_form_value(payload: dict[str, list[str]], key: str, *, default: str) -> int:
+    raw = _first_form_value(payload, key, default=default).strip()
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"{key} must be a positive integer, got {raw!r}") from exc
+    if value <= 0:
+        raise ValueError(f"{key} must be a positive integer, got {value}")
+    return value
+
+
+def _positive_float_form_value(payload: dict[str, list[str]], key: str, *, default: str) -> float:
+    raw = _first_form_value(payload, key, default=default).strip()
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise ValueError(f"{key} must be a positive number, got {raw!r}") from exc
+    if value <= 0:
+        raise ValueError(f"{key} must be a positive number, got {value}")
+    return value
+
+
 @router.post("/paper/start", response_class=HTMLResponse)
 async def paper_start(request: Request):
     try:
         body = await request.body()
         form = parse_qs(body.decode("utf-8"), keep_blank_values=True)
         timeframe = _first_form_value(form, "timeframe", default="30m")
-        top_n = int(_first_form_value(form, "top_n", default="20"))
-        initial_capital = float(_first_form_value(form, "initial_capital", default="100000"))
+        top_n = _positive_int_form_value(form, "top_n", default="20")
+        initial_capital = _positive_float_form_value(form, "initial_capital", default="100000")
         start_paper_session(timeframe=timeframe, top_n=top_n, initial_capital=initial_capital)
     except BinanceConnectivityError as exc:
         context = build_paper_dashboard_context(action_error=str(exc), connectivity_report=exc.report)

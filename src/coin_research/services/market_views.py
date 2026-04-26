@@ -7,16 +7,14 @@ import psycopg
 
 from ..data import timeframe_to_milliseconds
 from ..db import load_market_summary, load_ohlcv, load_symbol_cards
+from ..time_utils import format_beijing_ts
 from .backtest_runs import list_backtest_runs, load_active_leaderboard, load_backtest_run
 
 
 def _safe_timestamp_label(value: Any) -> str | None:
     if value is None:
         return None
-    timestamp = pd.to_datetime(value, errors="coerce", utc=True)
-    if pd.isna(timestamp):
-        return str(value)
-    return timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
+    return format_beijing_ts(value, seconds=True)
 
 
 def _format_exit_marker_label(exit_reason: Any) -> str:

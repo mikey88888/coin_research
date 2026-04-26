@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from contextlib import redirect_stderr
+import io
+import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -7,6 +10,19 @@ from coin_research.live.runner import main, run_session
 
 
 class PaperRunnerTests(unittest.TestCase):
+    def _run_main(self, *argv: str) -> tuple[int, str]:
+        stderr = io.StringIO()
+        with patch.object(sys, "argv", ["paper-runner", *argv]), redirect_stderr(stderr):
+            with self.assertRaises(SystemExit) as exc:
+                main()
+        return exc.exception.code, stderr.getvalue()
+
+    def test_run_session_rejects_non_positive_poll_seconds_early(self) -> None:
+        with patch("coin_research.live.runner._configure_logging") as mocked_logging:
+            with self.assertRaisesRegex(ValueError, "poll_seconds must be a positive integer, got 0"):
+                run_session(session_id="paper-1", poll_seconds=0)
+        mocked_logging.assert_not_called()
+
     def test_run_session_marks_failed_when_universe_bootstrap_raises(self) -> None:
         fake_conn = MagicMock()
         session = {
@@ -45,6 +61,12 @@ class PaperRunnerTests(unittest.TestCase):
 
         mocked_event.assert_called_once()
         mocked_failed.assert_called_once()
+
+    def test_runner_main_rejects_non_positive_poll_seconds_cleanly(self) -> None:
+        code, stderr = self._run_main("--session-id", "paper-1", "--poll-seconds", "0")
+        self.assertEqual(code, 2)
+        self.assertIn("argument --poll-seconds: must be a positive integer, got 0", stderr)
+        self.assertNotIn("Traceback", stderr)
 
     def test_runner_main_exits_nonzero_without_rethrowing_traceback(self) -> None:
         with patch("coin_research.live.runner.run_session", side_effect=RuntimeError("boom")), patch(

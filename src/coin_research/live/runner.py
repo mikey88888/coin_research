@@ -42,6 +42,16 @@ from .store import (
 DEFAULT_POLL_SECONDS = 15
 
 
+def _positive_int_arg(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"must be an integer, got {value!r}") from exc
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError(f"must be a positive integer, got {parsed}")
+    return parsed
+
+
 def _configure_logging(session_id: str) -> logging.Logger:
     log_dir = paper_log_dir()
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -113,6 +123,8 @@ def _load_or_snapshot_universe(*, conn, session: dict[str, object], exchange) ->
 
 
 def run_session(*, session_id: str, poll_seconds: int = DEFAULT_POLL_SECONDS) -> None:
+    if poll_seconds <= 0:
+        raise ValueError(f"poll_seconds must be a positive integer, got {poll_seconds}")
     logger = _configure_logging(session_id)
     logger.info("runner booting session_id=%s poll_seconds=%s", session_id, poll_seconds)
     conn = None
@@ -252,7 +264,7 @@ def run_session(*, session_id: str, poll_seconds: int = DEFAULT_POLL_SECONDS) ->
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the paper-trading worker for a session")
     parser.add_argument("--session-id", required=True)
-    parser.add_argument("--poll-seconds", type=int, default=DEFAULT_POLL_SECONDS)
+    parser.add_argument("--poll-seconds", type=_positive_int_arg, default=DEFAULT_POLL_SECONDS)
     args = parser.parse_args()
     try:
         run_session(session_id=args.session_id, poll_seconds=args.poll_seconds)

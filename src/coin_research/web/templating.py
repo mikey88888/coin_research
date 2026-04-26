@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pandas as pd
 from fastapi.templating import Jinja2Templates
+
+from ..time_utils import format_beijing_ts
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = Jinja2Templates(directory=str(PACKAGE_ROOT / "templates"))
@@ -43,10 +44,7 @@ def _format_pct(value, decimals: int = 2):
 def _format_ts(value):
     if value is None or value == "":
         return "n/a"
-    timestamp = pd.to_datetime(value, errors="coerce", utc=True)
-    if pd.isna(timestamp):
-        return str(value)
-    return timestamp.strftime("%Y-%m-%d %H:%M UTC")
+    return format_beijing_ts(value) or str(value)
 
 
 TEMPLATES.env.filters["format_number"] = _format_number

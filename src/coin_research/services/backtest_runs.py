@@ -10,6 +10,7 @@ import pandas as pd
 from pandas.errors import EmptyDataError
 
 from ..config import project_root
+from ..time_utils import format_beijing_ts
 
 
 def backtests_root(root: Path | None = None) -> Path:
@@ -47,7 +48,7 @@ def _format_timestamp(value: Any) -> str | None:
     timestamp = _safe_timestamp(value)
     if timestamp is None:
         return str(value) if value not in (None, "") else None
-    return timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
+    return format_beijing_ts(timestamp, seconds=True)
 
 
 def _strategy_label_zh(value: Any) -> str:
