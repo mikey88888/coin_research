@@ -142,6 +142,24 @@
 - 假设：趋势中的回撤买点比追突破有更好盈亏比
 - 最小实现：趋势过滤 + 回撤到均线/通道中位后再入场
 
+### 17. Inverse Short Absolute Momentum Gated Composite
+- 类型：反向验证 / 空头对照
+- 数据需求：多币种 OHLCV
+- 状态：tested
+- 假设：如果 Absolute Momentum Gated Composite 的信号同时适合做空，可能说明它只是捕捉高波动而不是方向性 alpha；若反向显著亏损，则更支持原策略方向性有效。
+- 最小实现：沿用 `lb60/vw60/top5/h5/rb5/mv0.5/am5` 选币与退出信号，但账户执行改为 `sell_short` 入场、`buy_to_cover` 退出，逐日按空头负债盯市，手续费与原 account 回测一致。
+- 最新实验：`20260426-182224__1d__short_lb60_vw60_top5_h5_rb5_mv0p5_am5` 已产出 short account prototype（1d，lookback_bars=60，volatility_window=60，top_k=5，hold_bars=5，rebalance_interval=5，min_volatility_pct=0.5，min_momentum_pct=5.0）
+- 当前观察：反向做空基本被证伪：年化 `-58.7051%`、最大回撤 `99.9620%`、return/drawdown `-0.5873`、`1188` 笔 closed trades、total return `-99.9540%`。胜率 `49.5791%` 接近随机，但平均单笔 `-2.5818%`、最差单笔 `-157.0160%`，说明原信号不是“多空两边都能赚”的泛高波动选择器，而是更偏趋势延续方向性 alpha；空头版不进入活跃榜单。注意：当前 short account 未计借币费/资金费，真实做空成本只会让结果更差。
+
+### 18. Paired Logical Mirror Short Ranking
+- 类型：全策略反选做空验证 / 排名规则
+- 数据需求：历史 account 回测 + OHLCV
+- 状态：tested
+- 假设：最终有效策略应同时看正向结果和逻辑镜像反向做空结果；本轮按用户指定的原始均值 `paired=(forward return/drawdown + inverse short return/drawdown)/2` 排名。
+- 最小实现：新增统一 logical mirror short signal generator，覆盖横截面排序、Donchian、EMA、Z-score、Volatility Compression、Five-wave；用 short account 执行；批量入口 `coin_research.rank_paired_inverse_short` 扫描历史正向 account run，生成 `*-inverse-short` artifacts，并重写 active top 10 leaderboard。
+- 最新实验：`reports/backtests/paired-inverse-short-ranking/20260426-200748/ranking.json` 已完成全历史配对重排：`79` 条正向 account run 均生成 inverse short artifacts，`78` 条可计算 paired score，`0` blocked；唯一未入排名的是 `20260406-201604__1d__three_wave_exit`，因为正向 summary 缺少可计算 return/drawdown。
+- 当前观察：按“原始均值”规则，five-wave 镜像 short 结果显著为正，导致 5m/30m five-wave 仍占据前三；当前第 4 名为 Breadth-Scaled Absolute Momentum Composite `bf0/bsf0.15`，paired `0.5687`（forward `1.3223`，inverse `-0.1848`）。这个规则会奖励“正向和反向镜像都赚钱”的结构，和此前“反向亏损证明方向性”的解释不同；后续若目标是筛方向性 alpha，应考虑改用 `(forward - inverse_short)/2` 或单独展示 robustness score。
+
 ## Working rules
 
 - 每个 2 小时实验周期优先从这里挑一个方向推进

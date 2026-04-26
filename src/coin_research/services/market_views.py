@@ -11,6 +11,9 @@ from ..time_utils import format_beijing_ts
 from .backtest_runs import list_backtest_runs, load_active_leaderboard, load_backtest_run
 
 
+MARKET_DETAIL_TIMEFRAME_CHOICES = ("1d", "4h", "30m", "5m")
+
+
 def _safe_timestamp_label(value: Any) -> str | None:
     if value is None:
         return None
@@ -98,9 +101,14 @@ def build_asset_detail_context(
     trade_id: str | None = None,
     dsn: str | None = None,
 ) -> dict[str, Any]:
-    frame = load_ohlcv(exchange_name=exchange_name, symbol=symbol, timeframe=timeframe, dsn=dsn)
+    normalized_timeframe = str(timeframe).strip()
+    if normalized_timeframe not in MARKET_DETAIL_TIMEFRAME_CHOICES:
+        allowed = ", ".join(MARKET_DETAIL_TIMEFRAME_CHOICES)
+        raise ValueError(f"unsupported timeframe: {normalized_timeframe!r}; expected one of [{allowed}]")
+
+    frame = load_ohlcv(exchange_name=exchange_name, symbol=symbol, timeframe=normalized_timeframe, dsn=dsn)
     if frame.empty:
-        raise ValueError(f"symbol not found or timeframe empty: {symbol} {timeframe}")
+        raise ValueError(f"symbol not found or timeframe empty: {symbol} {normalized_timeframe}")
     frame["bar_time"] = pd.to_datetime(frame["bar_time"], errors="coerce", utc=True)
     frame = frame.sort_values("bar_time").reset_index(drop=True)
     selected_trade = None
@@ -110,7 +118,7 @@ def build_asset_detail_context(
         except FileNotFoundError:
             meta = None
             trades = pd.DataFrame()
-        if meta and meta.get("timeframe") == timeframe and not trades.empty:
+        if meta and meta.get("timeframe") == normalized_timeframe and not trades.empty:
             match = trades[
                 (trades["symbol"].astype("string") == symbol)
                 & (
@@ -125,7 +133,7 @@ def build_asset_detail_context(
     selected_trade_summary = None
     overlay = {"waveLine": [], "markers": []}
     if selected_trade is not None:
-        timeframe_ms = timeframe_to_milliseconds(timeframe)
+        timeframe_ms = timeframe_to_milliseconds(normalized_timeframe)
         context_bars = 12
         has_wave_points = all(
             f"p{idx}_date" in selected_trade.index and f"p{idx}_price" in selected_trade.index and pd.notna(selected_trade.get(f"p{idx}_date"))
@@ -199,12 +207,12 @@ def build_asset_detail_context(
         }
         for row in price_rows.itertuples(index=False)
     ]
-    timeframe_options = ["1d", "4h", "30m", "5m"]
+    timeframe_options = list(MARKET_DETAIL_TIMEFRAME_CHOICES)
     return {
-        "page_title": f"{symbol} {timeframe} 行情详情",
+        "page_title": f"{symbol} {normalized_timeframe} 行情详情",
         "exchange_name": exchange_name,
         "symbol": symbol,
-        "timeframe": timeframe,
+        "timeframe": normalized_timeframe,
         "timeframe_options": timeframe_options,
         "latest_bar_time": _safe_timestamp_label(latest.bar_time),
         "latest_close": float(latest.close),

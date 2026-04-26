@@ -63,6 +63,8 @@ def _strategy_label_zh(value: Any) -> str:
 def _engine_type_label(value: Any) -> str:
     mapping = {
         "account": "账户",
+        "short_account": "空头账户",
+        "paired_account_short": "正反均值",
         "signal": "信号",
     }
     text = str(value) if value not in (None, "") else "未知"
@@ -169,7 +171,7 @@ def list_backtest_runs(root: Path | None = None) -> list[dict[str, Any]]:
         payload = _read_json(str(meta_path), meta_path.stat().st_mtime_ns)
         summary_path = Path(payload["summary_path"])
         summary = _read_json(str(summary_path), summary_path.stat().st_mtime_ns) if summary_path.exists() else {}
-        if payload.get("engine_type") == "account":
+        if payload.get("engine_type") in {"account", "short_account"}:
             summary = _compute_account_metrics(
                 summary,
                 _load_optional_csv(payload.get("equity_curve_path")),
@@ -258,6 +260,11 @@ def load_active_leaderboard(root: Path | None = None) -> list[dict[str, Any]]:
                 "closed_trades": _safe_int(item.get("closed_trades")),
                 "win_rate": _safe_float(item.get("win_rate")),
                 "return_drawdown_ratio": _safe_float(item.get("return_drawdown_ratio")),
+                "forward_run_id": item.get("forward_run_id"),
+                "inverse_short_run_id": item.get("inverse_short_run_id"),
+                "forward_return_drawdown_ratio": _safe_float(item.get("forward_return_drawdown_ratio")),
+                "inverse_short_return_drawdown_ratio": _safe_float(item.get("inverse_short_return_drawdown_ratio")),
+                "paired_return_drawdown_ratio": _safe_float(item.get("paired_return_drawdown_ratio")),
                 "detail_url": f"/research/runs/{quote_plus(str(run_id))}" if run_id else None,
             }
         )
@@ -334,7 +341,7 @@ def build_strategy_compare_context(strategy_key: str, root: Path | None = None) 
 
 def build_run_detail_context(run_id: str, root: Path | None = None) -> dict[str, Any]:
     meta, summary, trades, orders, equity_curve = load_backtest_run(run_id, root=root)
-    if meta.get("engine_type") == "account":
+    if meta.get("engine_type") in {"account", "short_account"}:
         summary = _compute_account_metrics(summary, equity_curve, orders)
     trade_rows = []
     if not trades.empty:

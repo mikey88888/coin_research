@@ -77,6 +77,12 @@ class MarketViewsTests(unittest.TestCase):
         self.assertEqual(context["leaderboard_rows"], leaderboard)
         self.assertEqual(context["featured_symbols"], [])
 
+    def test_asset_detail_rejects_unsupported_timeframe_with_readable_error(self) -> None:
+        with patch("coin_research.services.market_views.load_ohlcv") as mocked_load:
+            with self.assertRaisesRegex(ValueError, r"unsupported timeframe: '15m'; expected one of \[1d, 4h, 30m, 5m\]"):
+                build_asset_detail_context("BTC/USDT", timeframe="15m")
+        mocked_load.assert_not_called()
+
     def test_asset_detail_handles_non_wave_trade_overlay(self) -> None:
         frame = pd.DataFrame(
             {

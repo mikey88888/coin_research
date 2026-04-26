@@ -10,7 +10,7 @@
   <div class="table-wrap">
     <table class="data-table">
       <thead>
-        <tr><th>排名</th><th>稳定性</th><th>策略</th><th>周期</th><th>退出</th><th>收益/回撤比</th><th>总收益</th><th>年化</th><th>回撤</th><th>闭合交易</th><th>运行</th></tr>
+        <tr><th>排名</th><th>稳定性</th><th>策略</th><th>周期</th><th>退出</th><th>正反均值</th><th>正向</th><th>反向</th><th>年化</th><th>回撤</th><th>闭合交易</th><th>运行</th></tr>
       </thead>
       <tbody>
         {% for row in leaderboard_rows %}
@@ -21,7 +21,8 @@
           <td><span class="pill">{{ row.timeframe }}</span></td>
           <td>{{ row.display_exit_mode }}</td>
           <td>{{ row.return_drawdown_ratio | format_number(4) }}</td>
-          <td>{{ row.total_return_pct | format_pct }}</td>
+          <td>{{ row.forward_return_drawdown_ratio | default(row.return_drawdown_ratio) | format_number(4) }}</td>
+          <td>{{ row.inverse_short_return_drawdown_ratio | format_number(4) }}</td>
           <td>{{ row.annualized_return_pct | format_pct }}</td>
           <td>{{ row.max_drawdown_pct | format_pct }}</td>
           <td>{{ row.closed_trades | format_int }}</td>

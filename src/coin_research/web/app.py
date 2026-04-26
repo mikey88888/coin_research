@@ -10,6 +10,13 @@ from .routes.pages import router as pages_router
 from .templating import STATIC_ROOT
 
 
+def _nonblank_host(value: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise argparse.ArgumentTypeError("must not be blank")
+    return normalized
+
+
 def _positive_port(value: str) -> int:
     try:
         port = int(value)
@@ -31,7 +38,7 @@ def create_app() -> FastAPI:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the crypto research dashboard")
-    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--host", type=_nonblank_host, default="0.0.0.0")
     parser.add_argument("--port", type=_positive_port, default=8001)
     parser.add_argument("--reload", action="store_true")
     args = parser.parse_args()

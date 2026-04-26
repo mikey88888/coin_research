@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from urllib.parse import parse_qs
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -96,6 +97,8 @@ def _positive_float_form_value(payload: dict[str, list[str]], key: str, *, defau
         value = float(raw)
     except ValueError as exc:
         raise ValueError(f"{key} must be a positive number, got {raw!r}") from exc
+    if not math.isfinite(value):
+        raise ValueError(f"{key} must be a finite positive number, got {raw!r}")
     if value <= 0:
         raise ValueError(f"{key} must be a positive number, got {value}")
     return value
