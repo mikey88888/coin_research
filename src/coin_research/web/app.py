@@ -11,7 +11,10 @@ from .templating import STATIC_ROOT
 
 
 def _positive_port(value: str) -> int:
-    port = int(value)
+    try:
+        port = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"must be an integer, got {value!r}") from exc
     if port <= 0:
         raise argparse.ArgumentTypeError(f"must be a positive integer, got {value}")
     if port > 65535:

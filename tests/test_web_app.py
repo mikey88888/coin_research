@@ -10,6 +10,15 @@ from coin_research.web.app import main
 
 
 class WebAppCliTests(unittest.TestCase):
+    def test_web_app_rejects_non_integer_port_cleanly(self) -> None:
+        stderr = io.StringIO()
+        with patch.object(sys, "argv", ["coin-research-web", "--port", "abc"]), redirect_stderr(stderr):
+            with self.assertRaises(SystemExit) as exc:
+                main()
+        self.assertEqual(exc.exception.code, 2)
+        self.assertIn("argument --port: must be an integer, got 'abc'", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+
     def test_web_app_requires_positive_port(self) -> None:
         stderr = io.StringIO()
         with patch.object(sys, "argv", ["coin-research-web", "--port", "0"]), redirect_stderr(stderr):

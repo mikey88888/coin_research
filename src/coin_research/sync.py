@@ -298,6 +298,7 @@ def sync_top_market_cap_ohlcv(
     symbols_limit: int | None = None,
     progress: Callable[[str], None] | None = None,
 ) -> dict[str, object]:
+    _require_positive_int(name="top_n", value=top_n)
     if symbols_limit is not None:
         _require_positive_int(name="symbols_limit", value=symbols_limit)
     normalized_quote = _normalize_quote_asset(quote)

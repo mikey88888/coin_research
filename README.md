@@ -154,6 +154,12 @@ uv run coin-research sync-top --exchange binance
 uv run coin-research sync-top --exchange binance --symbols-limit 5
 ```
 
+如果当前 WSL 环境无法访问交易所公网接口、但你只想先把本地研究看板恢复到可浏览状态，可以先写入一批最小演示行情样本：
+
+```bash
+uv run python scripts/seed_demo_market_data.py
+```
+
 当前同步策略默认按以下时间窗补数据：
 
 - `1d`：全历史

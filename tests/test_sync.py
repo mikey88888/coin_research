@@ -127,6 +127,16 @@ class SyncTests(unittest.TestCase):
                 batch_limit=0,
             )
 
+    def test_sync_top_market_cap_ohlcv_requires_positive_top_n(self) -> None:
+        with patch("coin_research.sync.create_exchange") as create_exchange:
+            with self.assertRaisesRegex(ValueError, "top_n must be a positive integer"):
+                sync_top_market_cap_ohlcv(
+                    conn=object(),
+                    config=ExchangeConfig(exchange="binance"),
+                    top_n=0,
+                )
+        create_exchange.assert_not_called()
+
     def test_sync_top_market_cap_ohlcv_requires_positive_symbols_limit(self) -> None:
         with self.assertRaisesRegex(ValueError, "symbols_limit must be a positive integer"):
             sync_top_market_cap_ohlcv(
