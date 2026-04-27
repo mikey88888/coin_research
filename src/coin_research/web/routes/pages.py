@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from ...services.backtest_runs import build_leaderboard_context, build_run_detail_context, build_runs_index_context, build_strategy_compare_context
 from ...services.market_views import build_asset_detail_context, build_market_home_context, build_symbol_list_context
 from ...live.connectivity import BinanceConnectivityError
-from ...live.paper import DEFAULT_TIMEFRAME, TIMEFRAME_CHOICES
+from ...live.paper import DEFAULT_TIMEFRAME, DEFAULT_TOP_N, TIMEFRAME_CHOICES
 from ...services.paper import build_paper_dashboard_context, start_paper_session, stop_paper_session
 from ..templating import TEMPLATES
 
@@ -112,20 +112,34 @@ def _choice_form_value(payload: dict[str, list[str]], key: str, *, default: str,
     return raw
 
 
+def _paper_form_values(payload: dict[str, list[str]]) -> dict[str, str]:
+    return {
+        "timeframe": _first_form_value(payload, "timeframe", default=DEFAULT_TIMEFRAME).strip() or DEFAULT_TIMEFRAME,
+        "top_n": _first_form_value(payload, "top_n", default=str(DEFAULT_TOP_N)).strip() or str(DEFAULT_TOP_N),
+        "initial_capital": _first_form_value(payload, "initial_capital", default="100000").strip() or "100000",
+    }
+
+
 @router.post("/paper/start", response_class=HTMLResponse)
 async def paper_start(request: Request):
+    form_values = {
+        "timeframe": DEFAULT_TIMEFRAME,
+        "top_n": str(DEFAULT_TOP_N),
+        "initial_capital": "100000",
+    }
     try:
         body = await request.body()
         form = parse_qs(body.decode("utf-8"), keep_blank_values=True)
+        form_values = _paper_form_values(form)
         timeframe = _choice_form_value(form, "timeframe", default=DEFAULT_TIMEFRAME, choices=TIMEFRAME_CHOICES)
-        top_n = _positive_int_form_value(form, "top_n", default="20")
+        top_n = _positive_int_form_value(form, "top_n", default=str(DEFAULT_TOP_N))
         initial_capital = _positive_float_form_value(form, "initial_capital", default="100000")
         start_paper_session(timeframe=timeframe, top_n=top_n, initial_capital=initial_capital)
     except BinanceConnectivityError as exc:
-        context = build_paper_dashboard_context(action_error=str(exc), connectivity_report=exc.report)
+        context = build_paper_dashboard_context(action_error=str(exc), connectivity_report=exc.report, form_values=form_values)
         return _render(request, template_name="pages/paper_dashboard.html", context=context)
     except Exception as exc:
-        context = build_paper_dashboard_context(action_error=str(exc))
+        context = build_paper_dashboard_context(action_error=str(exc), form_values=form_values)
         return _render(request, template_name="pages/paper_dashboard.html", context=context)
     return RedirectResponse(url="/paper", status_code=303)
 

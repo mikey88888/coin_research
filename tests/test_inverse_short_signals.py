@@ -70,6 +70,32 @@ class InverseShortSignalTests(unittest.TestCase):
         self.assertTrue(signals)
         self.assertEqual(signals[0].symbol, "AAA/USDT")
 
+    def test_breadth_ema_scaled_inverse_accepts_new_strategy_key(self) -> None:
+        signals = build_inverse_short_signals(
+            strategy_key="breadth-ema-scaled-absolute-momentum-composite",
+            market_frames={
+                "AAA/USDT": _frame("AAA/USDT", [100, 90, 80, 70, 60, 55, 50]),
+                "BBB/USDT": _frame("BBB/USDT", [100, 92, 84, 88, 108, 120, 132]),
+                "CCC/USDT": _frame("CCC/USDT", [100, 94, 88, 90, 104, 112, 120]),
+            },
+            params={
+                "lookback_bars": 2,
+                "volatility_window": 2,
+                "hold_bars": 1,
+                "top_k": 2,
+                "rebalance_interval": 2,
+                "min_volatility_pct": 0.5,
+                "min_momentum_pct": 0.0,
+                "breadth_momentum_floor_pct": 0.0,
+                "breadth_scale_floor_ratio": 0.55,
+                "breadth_ema_span": 2,
+            },
+            timeframe="1d",
+        )
+
+        self.assertGreaterEqual(len(signals), 2)
+        self.assertIn("AAA/USDT", [signal.symbol for signal in signals])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -72,6 +72,9 @@ class PagesRouteTests(unittest.TestCase):
                 "default_timeframe": "30m",
                 "default_top_n": 20,
                 "default_initial_capital": 100000,
+                "form_timeframe": "30m",
+                "form_top_n": "20",
+                "form_initial_capital": "100000",
                 "paper_error": None,
                 "action_error": None,
             },
@@ -95,7 +98,7 @@ class PagesRouteTests(unittest.TestCase):
         request = self._request(
             method="POST",
             path="/paper/start",
-            body=b"timeframe=30m&top_n=20&initial_capital=100000",
+            body=b"timeframe=4h&top_n=7&initial_capital=123456",
         )
         report = {
             "ok": False,
@@ -121,6 +124,9 @@ class PagesRouteTests(unittest.TestCase):
         self.assertIn("Binance 连接诊断", body)
         self.assertIn("env_binance_ping", body)
         self.assertIn("HTTPS_PROXY=http://127.0.0.1:7897", body)
+        self.assertIn('option value="4h" selected', body)
+        self.assertIn('name="top_n" min="1" value="7"', body)
+        self.assertIn('name="initial_capital" min="1" step="1" value="123456"', body)
 
     def test_paper_start_rejects_invalid_timeframe_with_readable_error(self) -> None:
         request = self._request(
@@ -135,6 +141,23 @@ class PagesRouteTests(unittest.TestCase):
         body = response.body.decode("utf-8")
         self.assertIn("timeframe must be one of [30m, 4h, 1d]", body)
         self.assertIn("5m", body)
+        self.assertIn('<option value="5m" selected>无效值: 5m</option>', body)
+        mocked_start.assert_not_called()
+
+    def test_paper_start_preserves_other_submitted_values_on_validation_error(self) -> None:
+        request = self._request(
+            method="POST",
+            path="/paper/start",
+            body=b"timeframe=4h&top_n=abc&initial_capital=250000",
+        )
+        with patch("coin_research.web.routes.pages.start_paper_session") as mocked_start:
+            response = asyncio.run(paper_start(request))
+
+        self.assertEqual(response.status_code, 200)
+        body = response.body.decode("utf-8")
+        self.assertIn('option value="4h" selected', body)
+        self.assertIn('name="top_n" min="1" value="abc"', body)
+        self.assertIn('name="initial_capital" min="1" step="1" value="250000"', body)
         mocked_start.assert_not_called()
 
     def test_paper_start_rejects_non_positive_top_n_with_readable_error(self) -> None:

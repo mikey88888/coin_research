@@ -43,6 +43,13 @@ from .store import (
 DEFAULT_POLL_SECONDS = 15
 
 
+def _nonblank_arg(value: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise argparse.ArgumentTypeError("must not be blank")
+    return normalized
+
+
 class BeijingLogFormatter(logging.Formatter):
     def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
         timestamp = datetime.fromtimestamp(record.created, tz=BEIJING_TZ)
@@ -272,7 +279,7 @@ def run_session(*, session_id: str, poll_seconds: int = DEFAULT_POLL_SECONDS) ->
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the paper-trading worker for a session")
-    parser.add_argument("--session-id", required=True)
+    parser.add_argument("--session-id", required=True, type=_nonblank_arg)
     parser.add_argument("--poll-seconds", type=_positive_int_arg, default=DEFAULT_POLL_SECONDS)
     args = parser.parse_args()
     try:

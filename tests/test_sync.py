@@ -51,6 +51,17 @@ class SyncTests(unittest.TestCase):
                 quote="   ",
             )
 
+    def test_resolve_top_market_cap_universe_rejects_missing_market_columns(self) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            r"markets_frame missing required columns: \['active', 'base', 'quote', 'spot'\]",
+        ):
+            resolve_top_market_cap_universe(
+                exchange_name="binance",
+                markets_frame=pd.DataFrame([{"symbol": "BTC/USDT"}]),
+                top_n=1,
+            )
+
     def test_resolve_top_market_cap_universe_trims_quote_whitespace(self) -> None:
         markets = pd.DataFrame(
             [

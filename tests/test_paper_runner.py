@@ -71,6 +71,12 @@ class PaperRunnerTests(unittest.TestCase):
         mocked_event.assert_called_once()
         mocked_failed.assert_called_once()
 
+    def test_runner_main_rejects_blank_session_id_cleanly(self) -> None:
+        code, stderr = self._run_main("--session-id", "   ")
+        self.assertEqual(code, 2)
+        self.assertIn("argument --session-id: must not be blank", stderr)
+        self.assertNotIn("Traceback", stderr)
+
     def test_runner_main_rejects_non_positive_poll_seconds_cleanly(self) -> None:
         code, stderr = self._run_main("--session-id", "paper-1", "--poll-seconds", "0")
         self.assertEqual(code, 2)

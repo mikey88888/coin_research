@@ -101,18 +101,21 @@
       <label>
         <span>周期</span>
         <select name="timeframe">
+          {% if form_timeframe and form_timeframe not in timeframe_choices %}
+            <option value="{{ form_timeframe }}" selected>无效值: {{ form_timeframe }}</option>
+          {% endif %}
           {% for item in timeframe_choices %}
-            <option value="{{ item }}" {% if item == default_timeframe %}selected{% endif %}>{{ item }}</option>
+            <option value="{{ item }}" {% if item == form_timeframe %}selected{% endif %}>{{ item }}</option>
           {% endfor %}
         </select>
       </label>
       <label>
         <span>Universe Top N</span>
-        <input type="number" name="top_n" min="1" value="{{ default_top_n }}" />
+        <input type="number" name="top_n" min="1" value="{{ form_top_n }}" />
       </label>
       <label>
         <span>初始资金</span>
-        <input type="number" name="initial_capital" min="1" step="1" value="{{ default_initial_capital }}" />
+        <input type="number" name="initial_capital" min="1" step="1" value="{{ form_initial_capital }}" />
       </label>
       <button class="primary-button" type="submit">启动模拟盘</button>
     </form>

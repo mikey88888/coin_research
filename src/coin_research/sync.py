@@ -94,6 +94,13 @@ def _normalize_quote_asset(value: str) -> str:
     return normalized
 
 
+def _require_market_frame_columns(markets_frame: pd.DataFrame) -> None:
+    required = {"active", "base", "quote", "spot", "symbol"}
+    missing = sorted(required.difference(markets_frame.columns))
+    if missing:
+        raise ValueError(f"markets_frame missing required columns: {missing}")
+
+
 def fetch_market_cap_page(*, page: int, per_page: int = 250, vs_currency: str = "usd") -> pd.DataFrame:
     _require_positive_int(name="page", value=page)
     _require_positive_int(name="per_page", value=per_page)
@@ -130,6 +137,7 @@ def resolve_top_market_cap_universe(
     _require_positive_int(name="top_n", value=top_n)
     _require_positive_int(name="max_candidate_pages", value=max_candidate_pages)
     normalized_quote = _normalize_quote_asset(quote)
+    _require_market_frame_columns(markets_frame)
 
     spot_markets = markets_frame.copy()
     spot_markets = spot_markets[spot_markets["spot"] == True]

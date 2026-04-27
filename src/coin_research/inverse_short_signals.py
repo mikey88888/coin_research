@@ -319,6 +319,19 @@ def _momentum_volatility_inverse(strategy_key: str, market_frames: dict[str, pd.
             liquidity_parts.append(dollar_volume.to_frame().set_index(frame[time_column])[symbol])
         liquidity_wide = pd.concat(liquidity_parts, axis=1).sort_index() if liquidity_parts else None
 
+    breadth_ema_weak_ratio_series = None
+    if strategy_key == "breadth-ema-scaled-absolute-momentum-composite":
+        breadth_floor = float(params.get("breadth_momentum_floor_pct", 0.0))
+        breadth_ema_span = int(params.get("breadth_ema_span", 3))
+        all_momentum = ((close_wide / close_wide.shift(lookback_bars)) - 1.0) * 100.0
+        realized_volatility_wide = returns_wide.rolling(volatility_window).std()
+        valid_mask = all_momentum.notna() & realized_volatility_wide.notna()
+        breadth_ema_weak_ratio_series = (
+            all_momentum.le(-1.0 * breadth_floor).where(valid_mask).mean(axis=1, skipna=True)
+            .ewm(span=breadth_ema_span, adjust=False, min_periods=1)
+            .mean()
+        )
+
     def base_metrics(signal_index: int) -> pd.DataFrame:
         ranking_close = close_wide.iloc[signal_index]
         lookback_close = close_wide.iloc[signal_index - lookback_bars]
@@ -335,6 +348,7 @@ def _momentum_volatility_inverse(strategy_key: str, market_frames: dict[str, pd.
             "absolute-momentum-volatility-composite",
             "breadth-regime-gated-composite",
             "breadth-scaled-absolute-momentum-composite",
+            "breadth-ema-scaled-absolute-momentum-composite",
             "liquidity-screened-absolute-momentum-composite",
         }:
             frame = frame[frame["momentum_pct"] <= (-1.0 * min_momentum_pct)].copy()
@@ -357,6 +371,13 @@ def _momentum_volatility_inverse(strategy_key: str, market_frames: dict[str, pd.
             return frame
         frame["volatility_pct"] = frame["volatility_pct"].clip(lower=min_volatility_pct)
         frame["score"] = frame["momentum_pct"] / frame["volatility_pct"]
+        if strategy_key == "breadth-ema-scaled-absolute-momentum-composite" and breadth_ema_weak_ratio_series is not None:
+            scale_floor = float(params.get("breadth_scale_floor_ratio", 0.0))
+            weak_ratio = breadth_ema_weak_ratio_series.iloc[signal_index]
+            if pd.isna(weak_ratio):
+                return pd.DataFrame()
+            scale = 0.0 if weak_ratio <= scale_floor or scale_floor >= 1.0 else min(max((float(weak_ratio) - scale_floor) / (1.0 - scale_floor), 0.0), 1.0)
+            frame.attrs["dynamic_top_k"] = min(len(frame), top_k, max(1, int(top_k * scale))) if scale > 0 else 0
         return frame
 
     def selector(metrics: pd.DataFrame) -> pd.DataFrame:
@@ -367,6 +388,9 @@ def _momentum_volatility_inverse(strategy_key: str, market_frames: dict[str, pd.
             weak_ratio = float((all_metrics["momentum_pct"] <= (-1.0 * floor)).mean()) if not all_metrics.empty else 0.0
             scale = 0.0 if weak_ratio <= scale_floor or scale_floor >= 1.0 else min(max((weak_ratio - scale_floor) / (1.0 - scale_floor), 0.0), 1.0)
             dynamic_top_k = min(len(metrics), top_k, max(1, int(top_k * scale))) if scale > 0 else 0
+            return metrics.sort_values(["score", "momentum_pct"], ascending=True).head(dynamic_top_k)
+        if strategy_key == "breadth-ema-scaled-absolute-momentum-composite":
+            dynamic_top_k = int(metrics.attrs.get("dynamic_top_k", 0))
             return metrics.sort_values(["score", "momentum_pct"], ascending=True).head(dynamic_top_k)
         return metrics.sort_values(["score", "momentum_pct"], ascending=True)
 
@@ -777,6 +801,7 @@ def build_inverse_short_signals(
         "absolute-momentum-volatility-composite",
         "breadth-regime-gated-composite",
         "breadth-scaled-absolute-momentum-composite",
+        "breadth-ema-scaled-absolute-momentum-composite",
         "liquidity-screened-absolute-momentum-composite",
     }:
         return _momentum_volatility_inverse(strategy_key, market_frames, params, time_column=time_column)

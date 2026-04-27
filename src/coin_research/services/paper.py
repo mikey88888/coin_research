@@ -42,7 +42,12 @@ def build_paper_dashboard_context(
     session_id: str | None = None,
     action_error: str | None = None,
     connectivity_report: dict[str, Any] | None = None,
+    form_values: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    form_values = form_values or {}
+    form_timeframe = str(form_values.get("timeframe", DEFAULT_TIMEFRAME)).strip() or DEFAULT_TIMEFRAME
+    form_top_n = str(form_values.get("top_n", DEFAULT_TOP_N)).strip() or str(DEFAULT_TOP_N)
+    form_initial_capital = str(form_values.get("initial_capital", 100000)).strip() or "100000"
     try:
         with connect_pg() as conn:
             ensure_schema(conn)
@@ -65,6 +70,9 @@ def build_paper_dashboard_context(
             "default_timeframe": DEFAULT_TIMEFRAME,
             "default_top_n": DEFAULT_TOP_N,
             "default_initial_capital": 100000,
+            "form_timeframe": form_timeframe,
+            "form_top_n": form_top_n,
+            "form_initial_capital": form_initial_capital,
             "paper_error": str(exc),
             "action_error": action_error,
             "connectivity_report": connectivity_report,
@@ -112,6 +120,9 @@ def build_paper_dashboard_context(
         "default_timeframe": DEFAULT_TIMEFRAME,
         "default_top_n": DEFAULT_TOP_N,
         "default_initial_capital": 100000,
+        "form_timeframe": form_timeframe,
+        "form_top_n": form_top_n,
+        "form_initial_capital": form_initial_capital,
         "paper_error": None,
         "action_error": action_error,
         "connectivity_report": connectivity_report,

@@ -160,6 +160,22 @@
 - 最新实验：`reports/backtests/paired-inverse-short-ranking/20260426-200748/ranking.json` 已完成全历史配对重排：`79` 条正向 account run 均生成 inverse short artifacts，`78` 条可计算 paired score，`0` blocked；唯一未入排名的是 `20260406-201604__1d__three_wave_exit`，因为正向 summary 缺少可计算 return/drawdown。
 - 当前观察：按“原始均值”规则，five-wave 镜像 short 结果显著为正，导致 5m/30m five-wave 仍占据前三；当前第 4 名为 Breadth-Scaled Absolute Momentum Composite `bf0/bsf0.15`，paired `0.5687`（forward `1.3223`，inverse `-0.1848`）。这个规则会奖励“正向和反向镜像都赚钱”的结构，和此前“反向亏损证明方向性”的解释不同；后续若目标是筛方向性 alpha，应考虑改用 `(forward - inverse_short)/2` 或单独展示 robustness score。
 
+## 30m Non-five-wave Candidate Sweep
+
+- 时间：`2026-04-26` 到 `2026-04-27`
+- 目标：只测非五浪方向，检查 30m 周期里是否有策略能进入当前 paired active top 10
+- paired 上榜线：本轮开始时第 10 名约为 `0.4553`
+- 最新实验：`reports/backtests/paired-inverse-short-ranking/20260427-051934/ranking.json`
+- 当前结论：5 个候选方向共 `20` 个 forward 30m account runs 与 `20` 个对应 inverse short runs 已全部产出；没有任何一个 30m 非五浪结果超过 `0.4553`，也没有任何一个进入 active leaderboard。最好的 30m 非五浪 paired 结果仅为 Breadth-Scaled Absolute Momentum Composite `0.0929`，说明在当前“forward 与 logical mirror short 原始均值”口径下，这批 30m 非五浪方向还不够强。
+- 方向汇总：
+  - `breadth-scaled-absolute-momentum-composite`：best paired `0.0929`，forward `0.7456`，inverse `-0.5598`，forward/inverse closed trades `2401/4783`，run `20260426-213921__30m__lb360_vw240_top5_h24_rb24_mv0p5_am5_bf0_bsf0p15`
+  - `absolute-momentum-volatility-composite`：best paired `-0.1649`，forward `0.2372`，inverse `-0.5670`，forward/inverse closed trades `6300/5759`，run `20260426-220349__30m__lb120_vw120_top5_h16_rb16_mv0p5_am5`
+  - `momentum-volatility-composite`：best paired `-0.4218`，forward `-0.1330`，inverse `-0.7106`，forward/inverse closed trades `7801/8090`，run `20260426-224548__30m__lb240_vw240_top5_h20_rb20_mv0p5`
+  - `cross-sectional-relative-strength`：best paired `-0.4437`，forward `-0.0753`，inverse `-0.8121`，forward/inverse closed trades `7615/8037`，run `20260426-234344__30m__lb240_top5_h20_rb20`
+  - `ema-trend-following`：best paired `-0.7709`，forward `-0.8218`，inverse `-0.7199`，forward/inverse closed trades `10920/9596`，run `20260427-023811__30m__fw40_sw120_sl12`
+- 解释：这轮 30m 扫描里，`breadth-scaled` 的正向确实还能跑出一定 alpha，但 logical mirror short 同样严重亏损，导致 paired 均值被明显拉低；`cross-sectional`、`momentum-volatility` 和 `ema-trend-following` 则是正向与反向都弱，基本可视为当前 30m 口径下的负样本。
+- 下一步优先：不要继续在这 5 个方向上做 30m 裸参数扫。更合理的是转向新的 30m 候选结构，或重新审视 paired 评分口径是否真的符合“方向性 alpha”筛选目标。
+
 ## Working rules
 
 - 每个 2 小时实验周期优先从这里挑一个方向推进
